@@ -1,0 +1,30 @@
+# config.toml
+[args]
+# server model
+num_users = 100      # int: number of users: K
+all_clients = false   # bool: aggregation over all clients true or false
+# server train
+epochs = 5          # int: rounds of training
+bs = 128             # int: test batch size
+frac = 0.1           # float: the fraction of clients: C
+gpu = true              # int: gpu device
+verbose = true       # bool: verbose print
+# client model
+model = "mlp"        # str: model name cnn or mlp
+num_classes = 10     # int: number of classes
+num_channels = 3     # int: number of channels of images
+norm = "batch_norm"  # str: batch_norm, layer_norm, or None
+num_filters = 32     # int: number of filters for conv nets
+#client train
+lr = 0.01            # float: learning rate
+device = 'cuda:0'       # str: client device
+local_ep = 1         # int: the number of local epochs: E
+local_bs = 10        # int: local batch size: B
+stopping_rounds = 50  # int: rounds of early stopping
+momentum = 0.5       # float: SGD momentum (default: 0.5)
+# data configuration
+dataset = "mnist"    # str: name of dataset cifar or mnist
+split = "user"       # str: train-test split type, user or sample
+iid = true           # bool: whether i.i.d or not
+# other configuration
+seed = 1             # int: random seed (default: 1)
