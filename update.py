@@ -4,27 +4,27 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class DatasetSplit(Dataset):
-    def __init__(self, dataset, idxs):
+    def __init__(self, dataset, idx):
         self.dataset = dataset
-        self.idxs = list(idxs)
+        self.idx = list(idx)
 
     def __len__(self):
-        return len(self.idxs)
+        return len(self.idx)
 
     def __getitem__(self, item):
-        image, label = self.dataset[self.idxs[item]]
+        image, label = self.dataset[self.idx[item]]
         return image, label
 
 
 class ClientPoint(object):
-    def __init__(self, args, dataset=None, idxs=None):
+    def __init__(self, args, dataset=None, idx=None):
         self.args = args
         self.loss_func = nn.CrossEntropyLoss()
         self.selected_clients = []
         self.ldr_train = DataLoader(
             DatasetSplit(
                 dataset,
-                idxs),
+                idx),
             batch_size=self.args['local_bs'],
             shuffle=True)
 

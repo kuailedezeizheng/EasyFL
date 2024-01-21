@@ -4,6 +4,9 @@ import copy
 import numpy as np
 from torchvision import datasets, transforms
 import torch
+
+from attacks.TriggerAttack import poisonous_data
+from defenses.LayerDefense import layer_defense
 from tools.sampling import mnist_iid, mnist_noniid, cifar_iid
 from tools.load_options import load_config
 from update import ClientPoint
@@ -59,6 +62,9 @@ if __name__ == '__main__':
         exit('Error: unrecognized dataset')
     img_size = dataset_train[0][0].shape
 
+    # build poisonous dataset
+    poisonous_dataset_train = poisonous_data(dataset_train, args['dataset'])
+
     # build model
     if args['model'] == 'cnn' and args['dataset'] == 'cifar':
         glob_model = CNNCifar(args=args).to(args['device'])
@@ -75,7 +81,7 @@ if __name__ == '__main__':
             args['device'])
     else:
         exit('Error: unrecognized model')
-    print(glob_model)
+
     glob_model.train()
 
     # copy weights
@@ -90,6 +96,14 @@ if __name__ == '__main__':
     val_acc_list, net_list = [], []
     w_locals = []
 
+    # load aggregate function
+    if args['aggregate_function'] == 'layer_defense':
+        aggregate_function = layer_defense
+    elif args['aggregate_function'] == 'fed_avg':
+        aggregate_function = fed_avg
+    else:
+        raise SystemExit("error aggregate function!")
+
     if args['all_clients']:
         print("Aggregation over all clients")
         w_locals = [w_glob for i in range(args['num_users'])]
@@ -98,25 +112,42 @@ if __name__ == '__main__':
         loss_locals = []
         if not args['all_clients']:
             w_locals = []
-        m = max(int(args['frac'] * args['num_users']), 1)
-        chosen_user = np.random.choice(
-            range(args['num_users']), m, replace=False)
-        for idx in chosen_user:
-            print("user %d join in train" % idx)
-            client_model = ClientPoint(
-                args=args,
-                dataset=dataset_train,
-                idxs=dict_users[idx])
-            w, loss = client_model.train(
-                net=copy.deepcopy(glob_model).to(
-                    args['device']))
+        normal_users_number = max(int(args['frac'] * args['num_users']), 1)
+        chosen_normal_user_list = np.random.choice(
+            range(args['num_users']), normal_users_number, replace=False)
+
+        malicious_users_number = max(
+            int(args['malicious_user_rate'] * args['num_users']), 1)
+        chosen_malicious_user_list = np.random.choice(
+            range(args['num_users']), malicious_users_number, replace=False)
+
+        for chosen_user_id in chosen_normal_user_list:
+            print("user %d join in train" % chosen_user_id)
+            if chosen_user_id not in chosen_malicious_user_list:
+                client_model = ClientPoint(
+                    args=args,
+                    dataset=dataset_train,
+                    idx=dict_users[chosen_user_id])
+                w, loss = client_model.train(
+                    net=copy.deepcopy(glob_model).to(
+                        args['device']))
+            else:
+                print("user %d is malicious user" % chosen_user_id)
+                client_model = ClientPoint(
+                    args=args,
+                    dataset=poisonous_dataset_train,
+                    idx=dict_users[chosen_user_id])
+                w, loss = client_model.train(
+                    net=copy.deepcopy(glob_model).to(
+                        args['device']))
             if args['all_clients']:
-                w_locals[idx] = copy.deepcopy(w)
+                w_locals[chosen_user_id] = copy.deepcopy(w)
             else:
                 w_locals.append(copy.deepcopy(w))
             loss_locals.append(copy.deepcopy(loss))
-        # update global weights
-        w_glob = fed_avg(w_locals)
+
+        # aggregate models
+        w_global = aggregate_function(w_locals)
 
         # copy weight to net_glob
         glob_model.load_state_dict(w_glob)
