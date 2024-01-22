@@ -27,7 +27,7 @@ def poisonous_data(dataset_train, data_set_name):
     print("Malicious data is being generated.")
     if data_set_name == 'mnist':
         mark_function = mark_a_two_times_two_white_dot
-    elif data_set_name == 'cifar':
+    elif data_set_name == 'cifar10' or data_set_name == 'cifar100':
         mark_function = mark_a_five_pixel_white_plus_logo
     else:
         raise ValueError('Unknown dataset')

@@ -21,7 +21,7 @@ def mnist_iid(dataset, num_users):
     return dict_users
 
 
-def mnist_noniid(dataset, num_users):
+def mnist_non_iid(dataset, num_users):
     """
     Sample non-I.I.D client data from MNIST dataset
     :param dataset:
@@ -49,7 +49,7 @@ def mnist_noniid(dataset, num_users):
     return dict_users
 
 
-def cifar_iid(dataset, num_users):
+def all_cifar_data_iid(dataset, num_users):
     """
     Sample I.I.D. client data from CIFAR10 dataset
     :param dataset:
@@ -82,4 +82,4 @@ if __name__ == '__main__':
                     (0.3081,
                      ))]))
     num = 100
-    d = mnist_noniid(dataset_train, num)
+    d = mnist_non_iid(dataset_train, num)
