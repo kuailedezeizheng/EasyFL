@@ -13,6 +13,10 @@ if __name__ == '__main__':
     MNIST_LeNet_Lab_Config['frac'] = 0.02
     then, you will run the federated learning like this:
     federated_learning(MNIST_LeNet_Lab_Config)
+    We have three ready-made experimental configurations:
+    (CIFAR-10, MobileNet)
+    (MNIST, LeNet)
+    (CIFAR-100, ResNet-18)
     """
     MNIST_LeNet_Lab_Config = load_config(lab_name="(MNIST, LeNet)")
     MNIST_LeNet_Lab_Config['aggregate_function'] = 'layer_defense'

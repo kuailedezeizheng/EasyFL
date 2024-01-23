@@ -1,4 +1,4 @@
-# config.toml
+# template_config.toml
 [args]
 # server model
 num_users = 100      # int: number of users: K
