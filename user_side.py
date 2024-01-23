@@ -72,7 +72,7 @@ class UserSide(object):
                 # 参数更新
                 optimizer.step()
 
-                if batch_idx % 100 == 0:
+                if batch_idx % 10 == 0:
                     print('Epoch {} Batch {}/{} Loss: {:.6f}'.format(epoch,
                                                                      batch_idx, len(train_loader), loss.item()))
                 epoch_loss_list.append(loss.item())
@@ -82,7 +82,7 @@ class UserSide(object):
     def test(self, model):
         test_loader = DataLoader(
             dataset=self.test_dataset,
-            batch_size=64,
+            batch_size=self.batch_size,
             shuffle=False)
 
         model.eval()

@@ -4,9 +4,9 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 50          # int: rounds of training
+epochs = 100          # int: rounds of training
 bs = 128             # int: test batch size
-frac = 0.1           # float: the fraction of clients: C
+frac = 0.8           # float: the fraction of clients: C
 gpu = true              # int: gpu device
 verbose = true       # bool: verbose print
 # client model
@@ -18,8 +18,8 @@ num_filters = 32     # int: number of filters for conv nets
 #client train
 lr = 0.01            # float: learning rate
 device = 'cuda:0'       # str: client device
-local_ep = 5         # int: the number of local epochs: 1
-local_bs = 10        # int: local batch size: 10
+local_ep = 64         # int: the number of local epochs: 1
+local_bs = 20        # int: local batch size: 10
 stopping_rounds = 50  # int: rounds of early stopping
 momentum = 0.5       # float: SGD momentum (default: 0.5)
 # data configuration
@@ -32,3 +32,4 @@ seed = 1             # int: random seed (default: 1)
 aggregate_function = "fed_avg" # str: name of defense function layer_defense or fed_avg
 # attack configuration
 malicious_user_rate = 0.2 # float: malicious user number
+attack_method = "trigger"

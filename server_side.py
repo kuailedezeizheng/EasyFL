@@ -17,15 +17,7 @@ from tools.sampling import generate_iid_client_data, generate_non_iid_client_dat
 matplotlib.use('Agg')
 
 
-def federated_learning(args):
-    # parse args
-    args['device'] = torch.device(
-        'cuda:0' if torch.cuda.is_available() and args['gpu'] else 'cpu')
-
-    device = torch.device(
-        "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
-
-    # load dataset and split users
+def load_dataset(args):
     if args['dataset'] == 'mnist':
         trans_mnist = transforms.Compose([
             transforms.ToTensor(),
@@ -70,24 +62,11 @@ def federated_learning(args):
     else:
         raise SystemExit('Error: unrecognized dataset')
 
-    # sample users
-    if args['iid']:
-        assigned_user_datasets_index_dict = generate_iid_client_data(train_dataset, args['num_users'])
-    else:
-        assigned_user_datasets_index_dict = generate_non_iid_client_data(
-            train_dataset, args['num_users'])
+    return train_dataset, test_dataset
 
-    # test_sampling_results(user_data_dict=assigned_user_datasets_index_dict, test_name=args['dataset'])
 
-    # build poisonous dataset
-    poisonous_dataset_train = copy.deepcopy(train_dataset)
-    poisonous_dataset_test = copy.deepcopy(test_dataset)
-    poisonous_dataset_train = poisonous_data(
-        poisonous_dataset_train, args['dataset'])
-    poisonous_dataset_test = poisonous_data(
-        poisonous_dataset_test, args['dataset'])
-
-    # build model
+def build_glob_model(args, device):
+    """Build a global model for training."""
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
         glob_model = models.mobilenet_v2(weights=None).to(device)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
@@ -96,23 +75,57 @@ def federated_learning(args):
         glob_model = LeNet().to(device)
     else:
         raise SystemExit('Error: unrecognized model')
+    return glob_model
 
-    glob_model.train()
 
-    # copy weights
-    w_glob = glob_model.state_dict()
-
-    # training
-    loss_train = []
-    all_user_model_weight_list = []
-
-    # load aggregate function
+def define_aggregate_function(args):
+    """Define the aggregate function for training."""
     if args['aggregate_function'] == 'layer_defense':
         aggregate_function = partial_layer_aggregation
     elif args['aggregate_function'] == 'fed_avg':
         aggregate_function = federated_averaging
     else:
         raise SystemExit("error aggregate function!")
+    return aggregate_function
+
+
+def federated_learning_train(args):
+    # parse args
+    device = torch.device(
+        "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
+
+    # load dataset and split users
+    train_dataset, test_dataset = load_dataset(args)
+
+    # sample users
+    assigned_user_datasets_index_dict = generate_iid_client_data(
+        train_dataset,
+        args['num_users']) if args['iid'] else generate_non_iid_client_data(
+        train_dataset,
+        args['num_users'])
+
+    # build poisonous dataset
+    poisonous_dataset_train, poisonous_dataset_test = copy.deepcopy(
+        train_dataset), copy.deepcopy(test_dataset)
+    poisonous_dataset_train, poisonous_dataset_test = poisonous_data(
+        poisonous_dataset_train, args['dataset']), poisonous_data(
+        poisonous_dataset_test, args['dataset'])
+
+    # build model
+    glob_model = build_glob_model(args, device)
+
+    # setting glob_model be train condition
+    glob_model.train()
+
+    # copy weights
+    w_glob = glob_model.state_dict()
+
+    # training
+    fl_train_loss_avg_list = []
+    all_user_model_weight_list = []
+
+    # load aggregate function
+    aggregate_function = define_aggregate_function(args)
 
     if args['all_clients']:
         print("Aggregation over all clients")
@@ -145,8 +158,7 @@ def federated_learning(args):
                     args=args,
                     train_dataset=train_dataset,
                     test_dataset=test_dataset,
-                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id]
-                )
+                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
                 user_model = copy.deepcopy(glob_model).to(device)
                 user_model_weight, loss = client_model.train(model=user_model)
             else:
@@ -155,8 +167,7 @@ def federated_learning(args):
                     args=args,
                     train_dataset=poisonous_dataset_train,
                     test_dataset=test_dataset,
-                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id]
-                )
+                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
                 user_model = copy.deepcopy(glob_model).to(device)
                 user_model_weight, loss = client_model.train(model=user_model)
             if args['all_clients']:
@@ -176,7 +187,7 @@ def federated_learning(args):
         # print loss
         loss_avg = sum(loss_locals_list) / len(loss_locals_list)
         print('Round {:3d}, Average loss {:.3f}'.format(epoch, loss_avg))
-        loss_train.append(loss_avg)
+        fl_train_loss_avg_list.append(loss_avg)
 
         # testing
         glob_model.eval()
@@ -194,7 +205,15 @@ def federated_learning(args):
         # Return to training
         glob_model.train()
 
-    # plot loss curve
+    return fl_train_loss_avg_list, test_set_main_accuracy_list, test_set_backdoor_accuracy_list
+
+
+def federated_learning(args):
+    # federated learning train
+    loss_train, test_set_main_accuracy_list, test_set_backdoor_accuracy_list = federated_learning_train(
+        args)
+
+    # plot Loss value, MA and BA curve
     save_accuracy_plots(
         args,
         loss_train,
@@ -202,9 +221,10 @@ def federated_learning(args):
         test_set_backdoor_accuracy_list)
 
     # Calculation accuracy
-    test_set_main_accuracy = test_set_main_accuracy_list[-1]
-    test_set_backdoor_accuracy = test_set_backdoor_accuracy_list[-1]
+    final_test_set_main_accuracy = test_set_main_accuracy_list[-1]
+    final_test_set_backdoor_accuracy = test_set_backdoor_accuracy_list[-1]
 
-    print(f'Main Accuracy on the test set: {test_set_main_accuracy:.2f}%')
     print(
-        f'Backdoor Accuracy on the test set: {test_set_backdoor_accuracy:.2f}%')
+        f'Final Model Main Accuracy on the test set: {final_test_set_main_accuracy:.2f}%')
+    print(
+        f'Final Model Backdoor Accuracy on the test set: {final_test_set_backdoor_accuracy:.2f}%')

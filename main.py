@@ -18,7 +18,7 @@ if __name__ == '__main__':
     (MNIST, LeNet)
     (CIFAR-100, ResNet-18)
     """
-    MNIST_LeNet_Lab_Config = load_config(lab_name="(MNIST, LeNet)")
-    MNIST_LeNet_Lab_Config['aggregate_function'] = 'layer_defense'
-    MNIST_LeNet_Lab_Config['frac'] = 0.02
-    federated_learning(MNIST_LeNet_Lab_Config)
+    CIFAR_ResNet_Lab_Config = load_config(lab_name="(CIFAR-100, ResNet-18)")
+
+    # stander test
+    federated_learning(CIFAR_ResNet_Lab_Config)
