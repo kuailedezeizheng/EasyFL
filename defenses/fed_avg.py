@@ -2,7 +2,7 @@ import copy
 import torch
 
 
-def fed_avg(w_list):
+def federated_averaging(w_list):
     w_avg = copy.deepcopy(w_list[0])
     for k in w_avg.keys():
         for i in range(1, len(w_list)):

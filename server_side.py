@@ -5,19 +5,19 @@ import numpy as np
 import torch
 from torchvision import datasets, transforms, models
 
-from UserSide import UserSide
-from attacks.TriggerAttack import poisonous_data
-from defenses.FedAvg import fed_avg
-from defenses.LayerDefense import layer_defense
+from user_side import UserSide
+from attacks.trigger_attack import poisonous_data
+from defenses.fed_avg import federated_averaging
+from defenses.layer_defense import partial_layer_aggregation
 from models.LeNet import LeNet
-from test import compute_accuracy
+from get_accuracy import compute_accuracy
 from tools.plot_experimental_results import save_accuracy_plots
-from tools.sampling import mnist_iid, mnist_non_iid, all_cifar_data_iid
+from tools.sampling import generate_iid_client_data, generate_non_iid_client_data, test_sampling_results
 
 matplotlib.use('Agg')
 
 
-def federated_learning_server_side(args):
+def federated_learning(args):
     # parse args
     args['device'] = torch.device(
         'cuda:0' if torch.cuda.is_available() and args['gpu'] else 'cpu')
@@ -41,11 +41,6 @@ def federated_learning_server_side(args):
             train=False,
             download=True,
             transform=trans_mnist)
-        # sample users
-        if args['iid']:
-            dict_users = mnist_iid(train_dataset, args['num_users'])
-        else:
-            dict_users = mnist_non_iid(train_dataset, args['num_users'])
     elif args['dataset'] == 'cifar10':
         trans_cifar10 = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -59,10 +54,6 @@ def federated_learning_server_side(args):
             train=False,
             download=True,
             transform=trans_cifar10)
-        if args['iid']:
-            dict_users = all_cifar_data_iid(train_dataset, args['num_users'])
-        else:
-            raise SystemExit("Error: only consider IID setting in CIFAR10")
     elif args['dataset'] == 'cifar100':
         trans_cifar100 = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -76,13 +67,17 @@ def federated_learning_server_side(args):
             train=False,
             download=True,
             transform=trans_cifar100)
-        if args['iid']:
-            dict_users = all_cifar_data_iid(train_dataset, args['num_users'])
-        else:
-            raise SystemExit(
-                'Error: only consider IID setting in All CIFAR dataset')
     else:
         raise SystemExit('Error: unrecognized dataset')
+
+    # sample users
+    if args['iid']:
+        assigned_user_datasets_index_dict = generate_iid_client_data(train_dataset, args['num_users'])
+    else:
+        assigned_user_datasets_index_dict = generate_non_iid_client_data(
+            train_dataset, args['num_users'])
+
+    # test_sampling_results(user_data_dict=assigned_user_datasets_index_dict, test_name=args['dataset'])
 
     # build poisonous dataset
     poisonous_dataset_train = copy.deepcopy(train_dataset)
@@ -109,18 +104,13 @@ def federated_learning_server_side(args):
 
     # training
     loss_train = []
-    cv_loss, cv_acc = [], []
-    val_loss_pre, counter = 0, 0
-    net_best = None
-    best_loss = None
-    val_acc_list, net_list = [], []
     all_user_model_weight_list = []
 
     # load aggregate function
     if args['aggregate_function'] == 'layer_defense':
-        aggregate_function = layer_defense
+        aggregate_function = partial_layer_aggregation
     elif args['aggregate_function'] == 'fed_avg':
-        aggregate_function = fed_avg
+        aggregate_function = federated_averaging
     else:
         raise SystemExit("error aggregate function!")
 
@@ -154,7 +144,9 @@ def federated_learning_server_side(args):
                 client_model = UserSide(
                     args=args,
                     train_dataset=train_dataset,
-                    test_dataset=test_dataset)
+                    test_dataset=test_dataset,
+                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id]
+                )
                 user_model = copy.deepcopy(glob_model).to(device)
                 user_model_weight, loss = client_model.train(model=user_model)
             else:
@@ -162,7 +154,9 @@ def federated_learning_server_side(args):
                 client_model = UserSide(
                     args=args,
                     train_dataset=poisonous_dataset_train,
-                    test_dataset=test_dataset)
+                    test_dataset=test_dataset,
+                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id]
+                )
                 user_model = copy.deepcopy(glob_model).to(device)
                 user_model_weight, loss = client_model.train(model=user_model)
             if args['all_clients']:
@@ -201,11 +195,16 @@ def federated_learning_server_side(args):
         glob_model.train()
 
     # plot loss curve
-    save_accuracy_plots(args, loss_train, test_set_main_accuracy_list, test_set_backdoor_accuracy_list)
+    save_accuracy_plots(
+        args,
+        loss_train,
+        test_set_main_accuracy_list,
+        test_set_backdoor_accuracy_list)
 
     # Calculation accuracy
     test_set_main_accuracy = test_set_main_accuracy_list[-1]
     test_set_backdoor_accuracy = test_set_backdoor_accuracy_list[-1]
 
     print(f'Main Accuracy on the test set: {test_set_main_accuracy:.2f}%')
-    print(f'Backdoor Accuracy on the test set: {test_set_backdoor_accuracy:.2f}%')
+    print(
+        f'Backdoor Accuracy on the test set: {test_set_backdoor_accuracy:.2f}%')

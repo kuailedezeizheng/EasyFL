@@ -2,7 +2,7 @@ import copy
 import torch
 
 
-def layer_defense(w):
+def partial_layer_aggregation(w):
     w_avg = copy.deepcopy(w[0])
 
     for k in w_avg.keys():

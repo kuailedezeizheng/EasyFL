@@ -1,11 +1,38 @@
 import torch
 from torch import nn, optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
+
+
+class UserDataset(Dataset):
+    def __init__(self, user_data_dict_index, dataset):
+        self.user_data_dict_index = user_data_dict_index
+        self.dataset = dataset
+
+    def __len__(self):
+        # 返回一个用户被分配的数据总长度
+        return len(self.user_data_dict_index)
+
+    def __getitem__(self, idx):
+        # 根据索引返回对应的数据和标签
+        real_user_index = self.user_data_dict_index[idx]
+        data_sample = self.dataset[real_user_index]
+
+        image = data_sample[0]
+        label = data_sample[1]
+
+        return image, label
 
 
 class UserSide(object):
-    def __init__(self, args, train_dataset=None, test_dataset=None):
-        self.train_dataset = train_dataset
+    def __init__(
+            self,
+            args,
+            train_dataset=None,
+            test_dataset=None,
+            user_data_dict_index=None):
+        self.train_dataset = UserDataset(
+            user_data_dict_index=user_data_dict_index,
+            dataset=train_dataset)
         self.test_dataset = test_dataset
         self.num_epochs = args['local_ep']
         self.learning_rate = args['lr']
@@ -53,7 +80,10 @@ class UserSide(object):
         return model.state_dict(), sum(epoch_loss_list) / len(epoch_loss_list)
 
     def test(self, model):
-        test_loader = DataLoader(dataset=self.test_dataset, batch_size=64, shuffle=False)
+        test_loader = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=64,
+            shuffle=False)
 
         model.eval()
 
@@ -69,6 +99,8 @@ class UserSide(object):
                 correct += (predicted == target).sum().item()
 
         accuracy = correct / total
-        print('Accuracy on the test set: {:.2f}%'.format(100 * correct / total))
+        print(
+            'Accuracy on the test set: {:.2f}%'.format(
+                100 * correct / total))
 
         return accuracy
