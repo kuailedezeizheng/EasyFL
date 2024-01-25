@@ -4,15 +4,16 @@ import matplotlib
 import numpy as np
 import torch
 from torchvision import datasets, transforms, models
+from tqdm import trange
 
-from user_side import UserSide
-from attacks.trigger_attack import poisonous_data
+from attacks.trigger_attack import poison_data
 from defenses.fed_avg import federated_averaging
 from defenses.layer_defense import partial_layer_aggregation
-from models.LeNet import LeNet
 from get_accuracy import compute_accuracy
+from models.LeNet import LeNet
 from tools.plot_experimental_results import save_accuracy_plots
-from tools.sampling import generate_iid_client_data, generate_non_iid_client_data, test_sampling_results
+from tools.sampling import generate_iid_client_data, generate_non_iid_client_data
+from user_side import UserSide
 
 matplotlib.use('Agg')
 
@@ -68,9 +69,9 @@ def load_dataset(args):
 def build_glob_model(args, device):
     """Build a global model for training."""
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
-        glob_model = models.mobilenet_v2(weights=None).to(device)
+        glob_model = models.mobilenet_v2().to(device)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        glob_model = models.resnet18(weights=None).to(device)
+        glob_model = models.resnet18().to(device)
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
         glob_model = LeNet().to(device)
     else:
@@ -107,9 +108,12 @@ def federated_learning_train(args):
     # build poisonous dataset
     poisonous_dataset_train, poisonous_dataset_test = copy.deepcopy(
         train_dataset), copy.deepcopy(test_dataset)
-    poisonous_dataset_train, poisonous_dataset_test = poisonous_data(
-        poisonous_dataset_train, args['dataset']), poisonous_data(
+    poisonous_dataset_train, poisonous_dataset_test = poison_data(
+        poisonous_dataset_train, args['dataset']), poison_data(
         poisonous_dataset_test, args['dataset'])
+
+    if args['verbose']:
+        print("Malicious data generated successfully.")
 
     # build model
     glob_model = build_glob_model(args, device)
@@ -140,19 +144,26 @@ def federated_learning_train(args):
     # calculate normal user number
     normal_users_number = max(int(args['frac'] * args['num_users']), 1)
 
-    test_set_main_accuracy_list = []
-    test_set_backdoor_accuracy_list = []
+    test_dataset_main_accuracy_list = []
+    test_dataset_backdoor_accuracy_list = []
 
-    for epoch in range(args['epochs']):
+    bar_style = "{l_bar}{bar}{r_bar}"
+    for epoch in trange(
+            args['epochs'],
+            desc="Federated Learning Training Processing",
+            unit="epoch",
+            bar_format=bar_style):
         loss_locals_list = []
         if not args['all_clients']:
-            print("Aggregation over selected user")
+            if args['verbose']:
+                print("Aggregation over selected user")
             all_user_model_weight_list = []
         chosen_normal_user_list = np.random.choice(
             range(args['num_users']), normal_users_number, replace=False)
 
         for chosen_user_id in chosen_normal_user_list:
-            print("user %d join in train" % chosen_user_id)
+            if args['verbose']:
+                print("user %d join in train" % chosen_user_id)
             if chosen_user_id not in chosen_malicious_user_list:
                 client_model = UserSide(
                     args=args,
@@ -160,22 +171,29 @@ def federated_learning_train(args):
                     test_dataset=test_dataset,
                     user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
                 user_model = copy.deepcopy(glob_model).to(device)
-                user_model_weight, loss = client_model.train(model=user_model)
+                user_model_weight, loss = client_model.train(
+                    model=user_model)
             else:
-                print("user %d is malicious user" % chosen_user_id)
+                if args['verbose']:
+                    print("user %d is malicious user" % chosen_user_id)
                 client_model = UserSide(
                     args=args,
                     train_dataset=poisonous_dataset_train,
                     test_dataset=test_dataset,
-                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
+                    poisonous_train_dataset=poisonous_dataset_train,
+                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id],
+                    toxic_data_ratio=args['toxic_data_ratio'])
                 user_model = copy.deepcopy(glob_model).to(device)
-                user_model_weight, loss = client_model.train(model=user_model)
+                user_model_weight, loss = client_model.train(
+                    model=user_model)
             if args['all_clients']:
                 all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
                     user_model_weight)
             else:
-                need_saved_user_model_weight = copy.deepcopy(user_model_weight)
-                all_user_model_weight_list.append(need_saved_user_model_weight)
+                need_saved_user_model_weight = copy.deepcopy(
+                    user_model_weight)
+                all_user_model_weight_list.append(
+                    need_saved_user_model_weight)
                 loss_locals_list.append(copy.deepcopy(loss))
 
         # aggregate models
@@ -186,26 +204,28 @@ def federated_learning_train(args):
 
         # print loss
         loss_avg = sum(loss_locals_list) / len(loss_locals_list)
-        print('Round {:3d}, Average loss {:.3f}'.format(epoch, loss_avg))
+        if args['verbose']:
+            print(
+                'Round {:3d}, Average loss {:.3f}'.format(
+                    epoch, loss_avg))
         fl_train_loss_avg_list.append(loss_avg)
 
         # testing
         glob_model.eval()
 
         # Calculation accuracy
-        test_set_main_accuracy_list.append(
+        test_dataset_main_accuracy_list.append(
             compute_accuracy(glob_model, test_dataset, args))
-        test_set_backdoor_accuracy_list.append(
+        test_dataset_backdoor_accuracy_list.append(
             compute_accuracy(
                 glob_model,
                 poisonous_dataset_test,
-                args,
-                is_backdoor=True))
+                args))
 
         # Return to training
         glob_model.train()
 
-    return fl_train_loss_avg_list, test_set_main_accuracy_list, test_set_backdoor_accuracy_list
+    return fl_train_loss_avg_list, test_dataset_main_accuracy_list, test_dataset_backdoor_accuracy_list
 
 
 def federated_learning(args):

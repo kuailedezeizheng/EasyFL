@@ -5,8 +5,7 @@ from torch.utils.data import DataLoader
 def compute_accuracy(
         net_g: torch.nn.Module,
         test_dataset: torch.utils.data.Dataset,
-        args: dict,
-        is_backdoor: bool = False) -> float:
+        args: dict) -> float:
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=args['bs'],
@@ -24,8 +23,7 @@ def compute_accuracy(
             outputs = net_g(data)
             _, predicted = torch.max(outputs.data, 1)
             total += target.size(0)
-            condition = predicted != target if is_backdoor else predicted == target
-            correct += condition.sum().item()
+            correct += (predicted == target).sum().item()
 
     accuracy = 100 * correct / total
 

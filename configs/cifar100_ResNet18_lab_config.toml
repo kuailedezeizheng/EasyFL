@@ -4,32 +4,27 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 10          # int: rounds of training
-bs = 128             # int: test batch size
-frac = 0.02           # float: the fraction of clients: C
+epochs = 200          # int: rounds of training
+bs = 32             # int: test batch size
+frac = 0.30           # float: the fraction of clients: C
 gpu = true              # int: gpu device
-verbose = true       # bool: verbose print
+verbose = false       # bool: verbose print
 # client model
 model = "resnet18"        # str: model name mobilenet, resnet18, lenet
-num_classes = 10     # int: number of classes
-num_channels = 3     # int: number of channels of images
-norm = "batch_norm"  # str: batch_norm, layer_norm, or None
-num_filters = 32     # int: number of filters for conv nets
 #client train
-lr = 0.01            # float: learning rate
-device = 'cuda:0'       # str: client device
-local_ep = 10         # int: the number of local epochs: 1
-local_bs = 10        # int: local batch size: 10
-stopping_rounds = 50  # int: rounds of early stopping
-momentum = 0.5       # float: SGD momentum (default: 0.5)
+lr = 0.000015            # float: learning rat
+local_ep = 1         # int: the number of local epochs: 2
+local_bs = 32        # int: local batch size: 10
+momentum = 0.9       # float: SGD momentum (default: 0.5)
+weight_decay = 1e-4  # float: SGD weight_decay
 # data configuration
 dataset = "cifar100"    # str: name of dataset cifar10, cifar100 or mnist
-split = "user"       # str: train-test split type, user or sample
-iid = true           # bool: whether i.i.d or not
+iid = "True"           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
-# defense function
+# defense configuration
 aggregate_function = "fed_avg" # str: name of defense function layer_defense or fed_avg
 # attack configuration
-malicious_user_rate = 0.2 # float: malicious user number
+malicious_user_rate = 0.3 # float: malicious user number
+toxic_data_ratio = 0.3 # float: Malicious users decide what proportion of their own dataset becomes toxic data
 attack_method = "trigger"
