@@ -68,17 +68,20 @@ class UserSide(object):
             "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
         self.batch_size = args['local_bs']
         self.toxic_data_ratio = args['toxic_data_ratio']
+        self.criterion = nn.CrossEntropyLoss()
 
     def train(self, model):
         train_loader = DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=True)
+            shuffle=True,
+            num_workers=2
+        )
 
         model.train()
 
         # 定义损失函数和优化器
-        criterion = nn.CrossEntropyLoss()
+        criterion = self.criterion
         optimizer = optim.SGD(
             model.parameters(),
             lr=self.learning_rate,
@@ -116,20 +119,24 @@ class UserSide(object):
         test_loader = DataLoader(
             dataset=self.test_dataset,
             batch_size=self.batch_size,
-            shuffle=False)
+            shuffle=False,
+            num_workers=2)
 
         model.eval()
-
+        test_loss = 0
         correct = 0
         total = 0
 
         with torch.no_grad():
-            for data, target in test_loader:
-                data, target = data.to(self.device), target.to(self.device)
-                outputs = model(data)
-                _, predicted = torch.max(outputs.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
+            for batch_idx, (inputs, targets) in enumerate(test_loader):
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                outputs = model(inputs)
+                loss = self.criterion(outputs, targets)
+
+                test_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total += targets.size(0)
+                correct += predicted.eq(targets).sum().item()
 
         accuracy = correct / total
         if self.verbose:

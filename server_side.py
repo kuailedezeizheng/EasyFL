@@ -1,21 +1,20 @@
 import copy
 
-import matplotlib
 import numpy as np
 import torch
-from torchvision import datasets, transforms, models
+from torchvision import datasets, transforms
 from tqdm import trange
 
 from attacks.trigger_attack import poison_data
 from defenses.fed_avg import federated_averaging
 from defenses.layer_defense import partial_layer_aggregation
-from get_accuracy import compute_accuracy
-from models.LeNet import LeNet
-from tools.plot_experimental_results import save_accuracy_plots
+from get_accuracy import fl_test
+from models.lenet import LeNet
+from models.mobilenetv2 import MobileNetV2
+from models.resnet import ResNet18
+from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
 from tools.sampling import generate_iid_client_data, generate_non_iid_client_data
 from user_side import UserSide
-
-matplotlib.use('Agg')
 
 
 def load_dataset(args):
@@ -35,8 +34,16 @@ def load_dataset(args):
             download=True,
             transform=trans_mnist)
     elif args['dataset'] == 'cifar10':
-        trans_cifar10 = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        trans_cifar10 = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+        test_cifar10 = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
         train_dataset = datasets.CIFAR10(
             'data/cifar10',
             train=True,
@@ -46,7 +53,7 @@ def load_dataset(args):
             'data/cifar10',
             train=False,
             download=True,
-            transform=trans_cifar10)
+            transform=test_cifar10)
     elif args['dataset'] == 'cifar100':
         trans_cifar100 = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -69,9 +76,9 @@ def load_dataset(args):
 def build_glob_model(args, device):
     """Build a global model for training."""
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
-        glob_model = models.mobilenet_v2().to(device)
+        glob_model = MobileNetV2().to(device)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        glob_model = models.resnet18().to(device)
+        glob_model = ResNet18().to(device)
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
         glob_model = LeNet().to(device)
     else:
@@ -148,6 +155,8 @@ def federated_learning_train(args):
     test_dataset_backdoor_accuracy_list = []
 
     bar_style = "{l_bar}{bar}{r_bar}"
+
+    writer = initialize_summary_writer()
     for epoch in trange(
             args['epochs'],
             desc="Federated Learning Training Processing",
@@ -214,17 +223,19 @@ def federated_learning_train(args):
         glob_model.eval()
 
         # Calculation accuracy
-        test_dataset_main_accuracy_list.append(
-            compute_accuracy(glob_model, test_dataset, args))
-        test_dataset_backdoor_accuracy_list.append(
-            compute_accuracy(
-                glob_model,
-                poisonous_dataset_test,
-                args))
+        test_dataset_main_accuracy = fl_test(glob_model, test_dataset, args)
+        test_dataset_backdoor_accuracy = fl_test(glob_model, poisonous_dataset_test, args)
+        test_dataset_main_accuracy_list.append(test_dataset_main_accuracy)
+        test_dataset_backdoor_accuracy_list.append(test_dataset_backdoor_accuracy)
+        plot_line_chart(writer, test_dataset_main_accuracy, "Main Accuracy", step=epoch)
+        plot_line_chart(writer, test_dataset_backdoor_accuracy, "Backdoor Accuracy", step=epoch)
+        plot_line_chart(writer, loss_avg, "Loss Value", step=epoch)
 
         # Return to training
         glob_model.train()
 
+    # 关闭SummaryWriter
+    writer.close()
     return fl_train_loss_avg_list, test_dataset_main_accuracy_list, test_dataset_backdoor_accuracy_list
 
 
@@ -232,13 +243,6 @@ def federated_learning(args):
     # federated learning train
     loss_train, test_set_main_accuracy_list, test_set_backdoor_accuracy_list = federated_learning_train(
         args)
-
-    # plot Loss value, MA and BA curve
-    save_accuracy_plots(
-        args,
-        loss_train,
-        test_set_main_accuracy_list,
-        test_set_backdoor_accuracy_list)
 
     # Calculation accuracy
     final_test_set_main_accuracy = test_set_main_accuracy_list[-1]

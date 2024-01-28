@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 
-def compute_accuracy(
+def fl_test(
         net_g: torch.nn.Module,
         test_dataset: torch.utils.data.Dataset,
         args: dict) -> float:

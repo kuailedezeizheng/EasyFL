@@ -12,11 +12,11 @@ verbose = false       # bool: verbose print
 # client model
 model = "mobilenet"        # str: model name mobilenet, resnet18, lenet
 #client train
-lr = 0.0027            # float: learning rat
+lr = 0.01            # float: learning rat
 local_ep = 2         # int: the number of local epochs: 2
 local_bs = 64        # int: local batch size: 10
 momentum = 0.9       # float: SGD momentum (default: 0.5)
-weight_decay = 1e-4  # float: SGD weight_decay
+weight_decay = 5e-4  # float: SGD weight_decay
 # data configuration
 dataset = "cifar10"    # str: name of dataset cifar10, cifar100 or mnist
 iid = "True"           # bool: whether i.i.d or not
