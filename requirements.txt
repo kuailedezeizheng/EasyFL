@@ -197,3 +197,9 @@ yarl=1.9.3=py39h5eee18b_0
 zipp=3.17.0=py39h06a4308_0
 zlib=1.2.13=h5eee18b_0
 zstd=1.5.5=hc292b87_0
+
+numpy~=1.26.3
+torchvision~=0.16.2
+toml~=0.10.2
+matplotlib~=3.8.0
+tqdm~=4.66.1

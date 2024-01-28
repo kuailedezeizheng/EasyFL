@@ -4,7 +4,7 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 30          # int: rounds of training
+epochs = 100          # int: rounds of training
 bs = 64             # int: test batch size
 frac = 0.30           # float: the fraction of clients: C
 gpu = true              # int: gpu device

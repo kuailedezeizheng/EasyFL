@@ -2,13 +2,14 @@ import copy
 
 import numpy as np
 import torch
+from torch import nn, optim
 from torchvision import datasets, transforms
 from tqdm import trange
 
 from attacks.trigger_attack import poison_data
 from defenses.fed_avg import federated_averaging
 from defenses.layer_defense import partial_layer_aggregation
-from get_accuracy import fl_test
+from test import fl_test
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
 from models.resnet import ResNet18
@@ -38,11 +39,13 @@ def load_dataset(args):
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                 (0.2023, 0.1994, 0.2010)),
         ])
         test_cifar10 = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                 (0.2023, 0.1994, 0.2010)),
         ])
         train_dataset = datasets.CIFAR10(
             'data/cifar10',
@@ -73,7 +76,7 @@ def load_dataset(args):
     return train_dataset, test_dataset
 
 
-def build_glob_model(args, device):
+def build_model(args, device):
     """Build a global model for training."""
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
         glob_model = MobileNetV2().to(device)
@@ -97,7 +100,59 @@ def define_aggregate_function(args):
     return aggregate_function
 
 
-def federated_learning_train(args):
+def federated_learning_train(
+        args,
+        train_dataset,
+        test_dataset,
+        poisonous_dataset_train,
+        aggregate_function,
+        assigned_user_datasets_index_dict,
+        device,
+        model,
+        chosen_malicious_user_list,
+        chosen_normal_user_list,
+        all_user_model_weight_list):
+    sum_loss = 0
+    model.train()
+    for chosen_user_id in chosen_normal_user_list:
+        if args['verbose']:
+            print("user %d join in train" % chosen_user_id)
+        if chosen_user_id not in chosen_malicious_user_list:
+            client_model = UserSide(
+                args=args,
+                train_dataset=train_dataset,
+                test_dataset=test_dataset,
+                user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
+            user_model = copy.deepcopy(model).to(device)
+            user_model_weight, user_loss = client_model.train(model=user_model)
+        else:
+            if args['verbose']:
+                print("user %d is malicious user" % chosen_user_id)
+            client_model = UserSide(
+                args=args,
+                train_dataset=poisonous_dataset_train,
+                test_dataset=test_dataset,
+                poisonous_train_dataset=poisonous_dataset_train,
+                user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id],
+                toxic_data_ratio=args['toxic_data_ratio'])
+            user_model = copy.deepcopy(model).to(device)
+            user_model_weight, user_loss = client_model.train(model=user_model)
+        if args['all_clients']:
+            all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
+                user_model_weight)
+        else:
+            all_user_model_weight_list.append(copy.deepcopy(user_model_weight))
+        sum_loss += user_loss
+
+    loss_avg = sum_loss / len(chosen_normal_user_list)
+
+    # aggregate models
+    temp_weight = aggregate_function(all_user_model_weight_list)
+
+    return temp_weight, loss_avg
+
+
+def federated_learning(args):
     # parse args
     device = torch.device(
         "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
@@ -122,25 +177,8 @@ def federated_learning_train(args):
     if args['verbose']:
         print("Malicious data generated successfully.")
 
-    # build model
-    glob_model = build_glob_model(args, device)
-
-    # setting glob_model be train condition
-    glob_model.train()
-
-    # copy weights
-    w_glob = glob_model.state_dict()
-
-    # training
-    fl_train_loss_avg_list = []
-    all_user_model_weight_list = []
-
-    # load aggregate function
-    aggregate_function = define_aggregate_function(args)
-
-    if args['all_clients']:
-        print("Aggregation over all clients")
-        all_user_model_weight_list = [w_glob for i in range(args['num_users'])]
+    # calculate normal user number
+    normal_users_number = max(int(args['frac'] * args['num_users']), 1)
 
     # build malicious user list
     malicious_users_number = max(
@@ -148,107 +186,60 @@ def federated_learning_train(args):
     chosen_malicious_user_list = np.random.choice(
         range(args['num_users']), malicious_users_number, replace=False)
 
-    # calculate normal user number
-    normal_users_number = max(int(args['frac'] * args['num_users']), 1)
+    # build model
+    model = build_model(args, device)
+    # copy weights
+    global_weight = model.state_dict()
 
-    test_dataset_main_accuracy_list = []
-    test_dataset_backdoor_accuracy_list = []
+    # load aggregate function
+    aggregate_function = define_aggregate_function(args)
 
     bar_style = "{l_bar}{bar}{r_bar}"
 
     writer = initialize_summary_writer()
+    best_ma = 0
     for epoch in trange(
             args['epochs'],
-            desc="Federated Learning Training Processing",
+            desc="Federated Learning Training",
             unit="epoch",
             bar_format=bar_style):
-        loss_locals_list = []
-        if not args['all_clients']:
-            if args['verbose']:
-                print("Aggregation over selected user")
-            all_user_model_weight_list = []
+        all_user_model_weight_list = []
         chosen_normal_user_list = np.random.choice(
             range(args['num_users']), normal_users_number, replace=False)
 
-        for chosen_user_id in chosen_normal_user_list:
-            if args['verbose']:
-                print("user %d join in train" % chosen_user_id)
-            if chosen_user_id not in chosen_malicious_user_list:
-                client_model = UserSide(
-                    args=args,
-                    train_dataset=train_dataset,
-                    test_dataset=test_dataset,
-                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
-                user_model = copy.deepcopy(glob_model).to(device)
-                user_model_weight, loss = client_model.train(
-                    model=user_model)
-            else:
-                if args['verbose']:
-                    print("user %d is malicious user" % chosen_user_id)
-                client_model = UserSide(
-                    args=args,
-                    train_dataset=poisonous_dataset_train,
-                    test_dataset=test_dataset,
-                    poisonous_train_dataset=poisonous_dataset_train,
-                    user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id],
-                    toxic_data_ratio=args['toxic_data_ratio'])
-                user_model = copy.deepcopy(glob_model).to(device)
-                user_model_weight, loss = client_model.train(
-                    model=user_model)
-            if args['all_clients']:
-                all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
-                    user_model_weight)
-            else:
-                need_saved_user_model_weight = copy.deepcopy(
-                    user_model_weight)
-                all_user_model_weight_list.append(
-                    need_saved_user_model_weight)
-                loss_locals_list.append(copy.deepcopy(loss))
+        if args['all_clients']:
+            print("Aggregation over all clients")
+            all_user_model_weight_list = [
+                global_weight for i in range(
+                    args['num_users'])]
 
-        # aggregate models
-        w_glob = aggregate_function(all_user_model_weight_list)
-
-        # copy weight to net_glob
-        glob_model.load_state_dict(w_glob)
-
-        # print loss
-        loss_avg = sum(loss_locals_list) / len(loss_locals_list)
-        if args['verbose']:
-            print(
-                'Round {:3d}, Average loss {:.3f}'.format(
-                    epoch, loss_avg))
-        fl_train_loss_avg_list.append(loss_avg)
-
-        # testing
-        glob_model.eval()
+        # federated learning train
+        temp_weight, loss_avg = federated_learning_train(args,
+                                                         train_dataset,
+                                                         test_dataset,
+                                                         poisonous_dataset_train,
+                                                         aggregate_function,
+                                                         assigned_user_datasets_index_dict,
+                                                         device,
+                                                         model,
+                                                         chosen_malicious_user_list,
+                                                         chosen_normal_user_list,
+                                                         all_user_model_weight_list)
 
         # Calculation accuracy
-        test_dataset_main_accuracy = fl_test(glob_model, test_dataset, args)
-        test_dataset_backdoor_accuracy = fl_test(glob_model, poisonous_dataset_test, args)
-        test_dataset_main_accuracy_list.append(test_dataset_main_accuracy)
-        test_dataset_backdoor_accuracy_list.append(test_dataset_backdoor_accuracy)
-        plot_line_chart(writer, test_dataset_main_accuracy, "Main Accuracy", step=epoch)
-        plot_line_chart(writer, test_dataset_backdoor_accuracy, "Backdoor Accuracy", step=epoch)
-        plot_line_chart(writer, loss_avg, "Loss Value", step=epoch)
+        ma, ba = fl_test(model,
+                         temp_weight,
+                         test_dataset,
+                         poisonous_dataset_test,
+                         device,
+                         args)
 
-        # Return to training
-        glob_model.train()
+        global_weight = copy.deepcopy(temp_weight)
+        model.load_state_dict(global_weight)
+
+        plot_line_chart(writer, ma, "Main accuracy", epoch)
+        plot_line_chart(writer, ba, "Backdoor accuracy", epoch)
+        plot_line_chart(writer, loss_avg, "Loss average", epoch)
 
     # 关闭SummaryWriter
     writer.close()
-    return fl_train_loss_avg_list, test_dataset_main_accuracy_list, test_dataset_backdoor_accuracy_list
-
-
-def federated_learning(args):
-    # federated learning train
-    loss_train, test_set_main_accuracy_list, test_set_backdoor_accuracy_list = federated_learning_train(
-        args)
-
-    # Calculation accuracy
-    final_test_set_main_accuracy = test_set_main_accuracy_list[-1]
-    final_test_set_backdoor_accuracy = test_set_backdoor_accuracy_list[-1]
-
-    print(
-        f'Final Model Main Accuracy on the test set: {final_test_set_main_accuracy:.2f}%')
-    print(
-        f'Final Model Backdoor Accuracy on the test set: {final_test_set_backdoor_accuracy:.2f}%')

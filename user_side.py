@@ -2,6 +2,7 @@ import random
 
 import torch
 from torch import nn, optim
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -51,7 +52,8 @@ class UserSide(object):
             test_dataset=None,
             poisonous_train_dataset=None,
             user_data_dict_index=None,
-            toxic_data_ratio=None):
+            toxic_data_ratio=None,
+    ):
         self.train_dataset = UserDataset(
             user_data_dict_index=user_data_dict_index,
             dataset=train_dataset,
@@ -68,7 +70,6 @@ class UserSide(object):
             "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
         self.batch_size = args['local_bs']
         self.toxic_data_ratio = args['toxic_data_ratio']
-        self.criterion = nn.CrossEntropyLoss()
 
     def train(self, model):
         train_loader = DataLoader(
@@ -81,18 +82,20 @@ class UserSide(object):
         model.train()
 
         # 定义损失函数和优化器
-        criterion = self.criterion
+        criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(
-            model.parameters(),
+            params=model.parameters(),
             lr=self.learning_rate,
             momentum=self.momentum_rate,
             weight_decay=self.weight_decay)
+        # 余弦退火调度器
+        scheduler = CosineAnnealingLR(optimizer, T_max=200)
 
         # 训练模型
         num_epochs = self.num_epochs
         model.to(self.device)
 
-        epoch_loss_list = []
+        local_sum_loss = 0
         for epoch in range(num_epochs):
             model.train()
             for batch_idx, (data, target) in enumerate(train_loader):
@@ -107,41 +110,12 @@ class UserSide(object):
                 loss.backward()
                 # 参数更新
                 optimizer.step()
+                # 学习率更新
+                scheduler.step()
 
                 if batch_idx % 5 == 0 and self.verbose:
                     print('Epoch {} Batch {}/{} Loss: {:.6f}'.format(epoch,
                                                                      batch_idx, len(train_loader), loss.item()))
-                epoch_loss_list.append(loss.item())
+                local_sum_loss += loss.item()
 
-        return model.state_dict(), sum(epoch_loss_list) / len(epoch_loss_list)
-
-    def test(self, model):
-        test_loader = DataLoader(
-            dataset=self.test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=2)
-
-        model.eval()
-        test_loss = 0
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(test_loader):
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                outputs = model(inputs)
-                loss = self.criterion(outputs, targets)
-
-                test_loss += loss.item()
-                _, predicted = outputs.max(1)
-                total += targets.size(0)
-                correct += predicted.eq(targets).sum().item()
-
-        accuracy = correct / total
-        if self.verbose:
-            print(
-                'Accuracy on the test set: {:.2f}%'.format(
-                    100 * correct / total))
-
-        return accuracy
+        return model.state_dict(), local_sum_loss/num_epochs
