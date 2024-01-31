@@ -25,9 +25,9 @@ if __name__ == '__main__':
 
     # MNIST_LeNet_Lab_Config['aggregate_function'] = 'layer_defense'
     #
-    # stander test
+    # #stander test
     # federated_learning(MNIST_LeNet_Lab_Config)
-
+    #
     CIFAR10_MobileNet_Lab_Config = load_config(lab_name="(CIFAR-10, MobileNet)")
     #
     # stander test

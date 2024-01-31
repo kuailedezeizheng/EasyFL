@@ -2,19 +2,22 @@ import copy
 
 import numpy as np
 import torch
-from torch import nn, optim
-from torchvision import datasets, transforms
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms, models
 from tqdm import trange
 
-from attacks.trigger_attack import poison_data
 from defenses.fed_avg import federated_averaging
 from defenses.layer_defense import partial_layer_aggregation
-from test import fl_test
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
-from models.resnet import ResNet18
+from models.resnet import resnet18
+from tasks.cifar100_task import load_cifar100_data_subsets
+from tasks.cifar10_task import load_cifar_data_subsets
+from tasks.mnist_task import load_mnist_data_subsets
+from tasks.task import PoisonTrainDataset, UserDataset, PoisonDataset
+from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
-from tools.sampling import generate_iid_client_data, generate_non_iid_client_data
 from user_side import UserSide
 
 
@@ -22,7 +25,7 @@ def load_dataset(args):
     if args['dataset'] == 'mnist':
         trans_mnist = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
+            transforms.Normalize((0.1307,), (0.3081,))
         ])
         train_dataset = datasets.MNIST(
             'data/mnist/',
@@ -58,8 +61,11 @@ def load_dataset(args):
             download=True,
             transform=test_cifar10)
     elif args['dataset'] == 'cifar100':
-        trans_cifar100 = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        trans_cifar100 = transforms.Compose([
+             transforms.ToTensor(),
+             transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
+                                  (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
+        ])
         train_dataset = datasets.CIFAR100(
             'data/cifar100',
             train=True,
@@ -81,12 +87,33 @@ def build_model(args, device):
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
         glob_model = MobileNetV2().to(device)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        glob_model = ResNet18().to(device)
+        glob_model = resnet18().to(device)
+        glob_model.fc = nn.Linear(glob_model.fc.in_features, 100).to(device)
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
         glob_model = LeNet().to(device)
     else:
         raise SystemExit('Error: unrecognized model')
     return glob_model
+
+
+def define_train_data_subsets(args, train_dataset):
+    """Build a dateset loader for training."""
+    if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
+        train_data_subsets = load_cifar_data_subsets(
+            args=args,
+            train_dataset=train_dataset)
+    elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
+        train_data_subsets = load_cifar100_data_subsets(
+            args=args,
+            train_dataset=train_dataset)
+    elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
+        train_data_subsets = load_mnist_data_subsets(
+            args=args,
+            train_dataset=train_dataset)
+    else:
+        raise SystemExit('Error: loading dataset')
+
+    return train_data_subsets
 
 
 def define_aggregate_function(args):
@@ -102,11 +129,8 @@ def define_aggregate_function(args):
 
 def federated_learning_train(
         args,
-        train_dataset,
-        test_dataset,
-        poisonous_dataset_train,
+        train_data_subsets,
         aggregate_function,
-        assigned_user_datasets_index_dict,
         device,
         model,
         chosen_malicious_user_list,
@@ -118,25 +142,25 @@ def federated_learning_train(
         if args['verbose']:
             print("user %d join in train" % chosen_user_id)
         if chosen_user_id not in chosen_malicious_user_list:
-            client_model = UserSide(
+            client_dataset = UserDataset(train_data_subsets[chosen_user_id])
+            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], shuffle=True)
+            client_device = UserSide(
                 args=args,
-                train_dataset=train_dataset,
-                test_dataset=test_dataset,
-                user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id])
+                train_dataset_loader=client_dataloader
+            )
             user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_model.train(model=user_model)
+            user_model_weight, user_loss = client_device.train(model=user_model)
         else:
             if args['verbose']:
                 print("user %d is malicious user" % chosen_user_id)
-            client_model = UserSide(
-                args=args,
-                train_dataset=poisonous_dataset_train,
-                test_dataset=test_dataset,
-                poisonous_train_dataset=poisonous_dataset_train,
-                user_data_dict_index=assigned_user_datasets_index_dict[chosen_user_id],
-                toxic_data_ratio=args['toxic_data_ratio'])
+            client_dataset = PoisonTrainDataset(train_data_subsets[chosen_user_id], args["dataset"])
+            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], shuffle=True)
+            client_device = UserSide(
+                    args=args,
+                    train_dataset_loader=client_dataloader
+            )
             user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_model.train(model=user_model)
+            user_model_weight, user_loss = client_device.train(model=user_model)
         if args['all_clients']:
             all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
                 user_model_weight)
@@ -160,19 +184,11 @@ def federated_learning(args):
     # load dataset and split users
     train_dataset, test_dataset = load_dataset(args)
 
-    # sample users
-    assigned_user_datasets_index_dict = generate_iid_client_data(
-        train_dataset,
-        args['num_users']) if args['iid'] else generate_non_iid_client_data(
-        train_dataset,
-        args['num_users'])
-
     # build poisonous dataset
-    poisonous_dataset_train, poisonous_dataset_test = copy.deepcopy(
-        train_dataset), copy.deepcopy(test_dataset)
-    poisonous_dataset_train, poisonous_dataset_test = poison_data(
-        poisonous_dataset_train, args['dataset']), poison_data(
-        poisonous_dataset_test, args['dataset'])
+    poisonous_test_dataset = copy.deepcopy(test_dataset)
+    poisonous_test_dataset = PoisonDataset(poisonous_test_dataset, args['dataset'])
+
+    train_data_subsets = define_train_data_subsets(args=args, train_dataset=train_dataset)
 
     if args['verbose']:
         print("Malicious data generated successfully.")
@@ -182,7 +198,7 @@ def federated_learning(args):
 
     # build malicious user list
     malicious_users_number = max(
-        int(args['malicious_user_rate'] * args['num_users']), 1)
+        int(args['malicious_user_rate'] * args['num_users']), 0)
     chosen_malicious_user_list = np.random.choice(
         range(args['num_users']), malicious_users_number, replace=False)
 
@@ -215,11 +231,8 @@ def federated_learning(args):
 
         # federated learning train
         temp_weight, loss_avg = federated_learning_train(args,
-                                                         train_dataset,
-                                                         test_dataset,
-                                                         poisonous_dataset_train,
+                                                         train_data_subsets,
                                                          aggregate_function,
-                                                         assigned_user_datasets_index_dict,
                                                          device,
                                                          model,
                                                          chosen_malicious_user_list,
@@ -230,7 +243,7 @@ def federated_learning(args):
         ma, ba = fl_test(model,
                          temp_weight,
                          test_dataset,
-                         poisonous_dataset_test,
+                         poisonous_test_dataset,
                          device,
                          args)
 

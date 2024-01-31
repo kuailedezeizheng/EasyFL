@@ -4,7 +4,7 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 100          # int: rounds of training
+epochs = 200          # int: rounds of training
 bs = 64             # int: test batch size
 frac = 0.30           # float: the fraction of clients: C
 gpu = true              # int: gpu device
@@ -19,7 +19,7 @@ momentum = 0.9       # float: SGD momentum (default: 0.5)
 weight_decay = 1e-4  # float: SGD weight_decay
 # data configuration
 dataset = "mnist"    # str: name of dataset cifar10, cifar100 or mnist
-iid = "True"           # bool: whether i.i.d or not
+iid = "False"           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
 # defense configuration
