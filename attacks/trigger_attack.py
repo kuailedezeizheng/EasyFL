@@ -26,7 +26,7 @@ def mark_a_five_pixel_white_plus_logo(image):
 def poison_data(image, dataset_name):
     if dataset_name == 'mnist':
         mark_function = mark_a_two_times_two_white_dot
-    elif dataset_name == 'cifar10' or dataset_name == 'cifar100':
+    elif dataset_name == 'cifar10' or dataset_name == 'cifar100' or dataset_name == 'imagenet':
         mark_function = mark_a_five_pixel_white_plus_logo
     else:
         print(dataset_name)

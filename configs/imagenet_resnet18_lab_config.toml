@@ -6,20 +6,20 @@ all_clients = false   # bool: aggregation over all clients true or false
 # server train
 epochs = 200          # int: rounds of training
 bs = 64             # int: test batch size
-frac = 0.50           # float: the fraction of clients: C
+frac = 0.30           # float: the fraction of clients: C
 gpu = true              # int: gpu device
 verbose = false       # bool: verbose print
 # client model
 model = "resnet18"        # str: model name mobilenet, resnet18, lenet
 #client train
-lr = 0.0001            # float: learning rat
+lr = 0.01            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
 local_bs = 64        # int: local batch size: 10
 momentum = 0.9       # float: SGD momentum (default: 0.5)
-weight_decay = 5e-4  # float: SGD weight_decay
+weight_decay = 1e-4  # float: SGD weight_decay
 # data configuration
-dataset = "cifar100"    # str: name of dataset cifar10, cifar100 or mnist
-iid = false           # bool: whether i.i.d or not
+dataset = "imagenet"    # str: name of dataset cifar10, cifar100 or mnist or imagenet
+iid = "False"           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
 # defense configuration

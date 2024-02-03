@@ -37,3 +37,8 @@ if __name__ == '__main__':
     #
     # # stander test
     # federated_learning(CIFAR100_ResNet_Lab_Config)
+    # IMAGENET_ResNet_Lab_Config = load_config(lab_name="(IMAGENET, ResNet-18)")
+    # #
+    # # stander test
+    # federated_learning(IMAGENET_ResNet_Lab_Config)
+

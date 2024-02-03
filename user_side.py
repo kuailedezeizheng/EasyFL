@@ -43,7 +43,6 @@ class UserSide(object):
         local_sum_loss = 0
         batch_idx = 0
         for epoch in range(num_epochs):
-            model.train()
             for data, target in train_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 # 清零梯度

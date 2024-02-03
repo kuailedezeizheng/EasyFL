@@ -5,15 +5,16 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, models
+from torchvision.datasets import ImageFolder
 from tqdm import trange
 
 from defenses.fed_avg import federated_averaging
 from defenses.layer_defense import partial_layer_aggregation
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
-from models.resnet import resnet18
 from tasks.cifar100_task import load_cifar100_data_subsets
 from tasks.cifar10_task import load_cifar_data_subsets
+from tasks.imagenet_task import load_imagenet_data_subsets
 from tasks.mnist_task import load_mnist_data_subsets
 from tasks.task import PoisonTrainDataset, UserDataset, PoisonDataset
 from test import fl_test
@@ -62,9 +63,11 @@ def load_dataset(args):
             transform=test_cifar10)
     elif args['dataset'] == 'cifar100':
         trans_cifar100 = transforms.Compose([
-             transforms.ToTensor(),
-             transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
-                                  (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
+                                 (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
         ])
         train_dataset = datasets.CIFAR100(
             'data/cifar100',
@@ -76,6 +79,15 @@ def load_dataset(args):
             train=False,
             download=True,
             transform=trans_cifar100)
+    elif args['dataset'] == 'imagenet':
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(64),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        train_dataset = ImageFolder('data/tiny-imagenet/train', transform=train_transform)
+        test_dataset = ImageFolder('data/tiny-imagenet/test', transform=train_transform)
     else:
         raise SystemExit('Error: unrecognized dataset')
 
@@ -87,8 +99,11 @@ def build_model(args, device):
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
         glob_model = MobileNetV2().to(device)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        glob_model = resnet18().to(device)
-        glob_model.fc = nn.Linear(glob_model.fc.in_features, 100).to(device)
+        resnet18_model = models.resnet18(weights=None)
+        resnet18_model.fc = nn.Linear(resnet18_model.fc.in_features, 100)
+        glob_model = resnet18_model.to(device)
+    elif args['model'] == 'resnet18' and args['dataset'] == 'imagenet':
+        glob_model = models.resnet18().to(device)
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
         glob_model = LeNet().to(device)
     else:
@@ -104,6 +119,10 @@ def define_train_data_subsets(args, train_dataset):
             train_dataset=train_dataset)
     elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
         train_data_subsets = load_cifar100_data_subsets(
+            args=args,
+            train_dataset=train_dataset)
+    elif args['model'] == 'resnet18' and args['dataset'] == 'imagenet':
+        train_data_subsets = load_imagenet_data_subsets(
             args=args,
             train_dataset=train_dataset)
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
@@ -143,7 +162,7 @@ def federated_learning_train(
             print("user %d join in train" % chosen_user_id)
         if chosen_user_id not in chosen_malicious_user_list:
             client_dataset = UserDataset(train_data_subsets[chosen_user_id])
-            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], shuffle=True)
+            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], drop_last=True, shuffle=True)
             client_device = UserSide(
                 args=args,
                 train_dataset_loader=client_dataloader
@@ -154,10 +173,10 @@ def federated_learning_train(
             if args['verbose']:
                 print("user %d is malicious user" % chosen_user_id)
             client_dataset = PoisonTrainDataset(train_data_subsets[chosen_user_id], args["dataset"])
-            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], shuffle=True)
+            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], drop_last=True, shuffle=True)
             client_device = UserSide(
-                    args=args,
-                    train_dataset_loader=client_dataloader
+                args=args,
+                train_dataset_loader=client_dataloader
             )
             user_model = copy.deepcopy(model).to(device)
             user_model_weight, user_loss = client_device.train(model=user_model)
