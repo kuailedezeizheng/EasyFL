@@ -86,8 +86,12 @@ def load_dataset(args):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
-        train_dataset = ImageFolder('data/tiny-imagenet/train', transform=train_transform)
-        test_dataset = ImageFolder('data/tiny-imagenet/test', transform=train_transform)
+        train_dataset = ImageFolder(
+            'data/tiny-imagenet/train',
+            transform=train_transform)
+        test_dataset = ImageFolder(
+            'data/tiny-imagenet/test',
+            transform=train_transform)
     else:
         raise SystemExit('Error: unrecognized dataset')
 
@@ -112,7 +116,7 @@ def build_model(args, device):
 
 
 def define_train_data_subsets(args, train_dataset):
-    """Build a dateset loader for training."""
+    """Build a dateset subset loader for training."""
     if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
         train_data_subsets = load_cifar_data_subsets(
             args=args,
@@ -135,23 +139,12 @@ def define_train_data_subsets(args, train_dataset):
     return train_data_subsets
 
 
-def define_aggregate_function(args):
-    """Define the aggregate function for training."""
-    if args['aggregate_function'] == 'layer_defense':
-        aggregate_function = partial_layer_aggregation
-    elif args['aggregate_function'] == 'fed_avg':
-        aggregate_function = federated_averaging
-    else:
-        raise SystemExit("error aggregate function!")
-    return aggregate_function
-
-
 def federated_learning_train(
         args,
         train_data_subsets,
-        aggregate_function,
         device,
         model,
+        global_weight,
         chosen_malicious_user_list,
         chosen_normal_user_list,
         all_user_model_weight_list):
@@ -162,24 +155,35 @@ def federated_learning_train(
             print("user %d join in train" % chosen_user_id)
         if chosen_user_id not in chosen_malicious_user_list:
             client_dataset = UserDataset(train_data_subsets[chosen_user_id])
-            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], drop_last=True, shuffle=True)
+            client_dataloader = DataLoader(
+                client_dataset,
+                batch_size=args["local_bs"],
+                drop_last=True,
+                shuffle=True)
             client_device = UserSide(
                 args=args,
                 train_dataset_loader=client_dataloader
             )
             user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_device.train(model=user_model)
+            user_model_weight, user_loss = client_device.train(
+                model=user_model)
         else:
             if args['verbose']:
                 print("user %d is malicious user" % chosen_user_id)
-            client_dataset = PoisonTrainDataset(train_data_subsets[chosen_user_id], args["dataset"])
-            client_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], drop_last=True, shuffle=True)
+            client_dataset = PoisonTrainDataset(
+                train_data_subsets[chosen_user_id], args["dataset"])
+            client_dataloader = DataLoader(
+                client_dataset,
+                batch_size=args["local_bs"],
+                drop_last=True,
+                shuffle=True)
             client_device = UserSide(
                 args=args,
                 train_dataset_loader=client_dataloader
             )
             user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_device.train(model=user_model)
+            user_model_weight, user_loss = client_device.train(
+                model=user_model)
         if args['all_clients']:
             all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
                 user_model_weight)
@@ -190,24 +194,36 @@ def federated_learning_train(
     loss_avg = sum_loss / len(chosen_normal_user_list)
 
     # aggregate models
-    temp_weight = aggregate_function(all_user_model_weight_list)
-
-    return temp_weight, loss_avg
+    """Define the aggregate function for training."""
+    if args['aggregate_function'] == 'layer_defense':
+        temp_weight = partial_layer_aggregation(w=all_user_model_weight_list)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'fed_avg':
+        temp_weight = federated_averaging(
+            w_list=all_user_model_weight_list,
+            global_weight=global_weight)
+        return temp_weight, loss_avg
+    else:
+        raise SystemExit("error aggregate function!")
 
 
 def federated_learning(args):
     # parse args
     device = torch.device(
         "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
+    if args['verbose']:
+        print("This Lab is on the {}", device)
 
     # load dataset and split users
     train_dataset, test_dataset = load_dataset(args)
 
     # build poisonous dataset
-    poisonous_test_dataset = copy.deepcopy(test_dataset)
-    poisonous_test_dataset = PoisonDataset(poisonous_test_dataset, args['dataset'])
+    use_poisonous_test_dataset = copy.deepcopy(test_dataset)
+    poisonous_test_dataset = PoisonDataset(
+        use_poisonous_test_dataset, args['dataset'])
 
-    train_data_subsets = define_train_data_subsets(args=args, train_dataset=train_dataset)
+    train_data_subsets = define_train_data_subsets(
+        args=args, train_dataset=train_dataset)
 
     if args['verbose']:
         print("Malicious data generated successfully.")
@@ -225,14 +241,10 @@ def federated_learning(args):
     model = build_model(args, device)
     # copy weights
     global_weight = model.state_dict()
-
-    # load aggregate function
-    aggregate_function = define_aggregate_function(args)
-
+    # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
 
     writer = initialize_summary_writer()
-    best_ma = 0
     for epoch in trange(
             args['epochs'],
             desc="Federated Learning Training",
@@ -249,25 +261,24 @@ def federated_learning(args):
                     args['num_users'])]
 
         # federated learning train
-        temp_weight, loss_avg = federated_learning_train(args,
-                                                         train_data_subsets,
-                                                         aggregate_function,
-                                                         device,
-                                                         model,
-                                                         chosen_malicious_user_list,
-                                                         chosen_normal_user_list,
-                                                         all_user_model_weight_list)
+        temp_weight, loss_avg = federated_learning_train(args=args,
+                                                         train_data_subsets=train_data_subsets,
+                                                         device=device,
+                                                         model=model,
+                                                         global_weight=global_weight,
+                                                         chosen_malicious_user_list=chosen_malicious_user_list,
+                                                         chosen_normal_user_list=chosen_normal_user_list,
+                                                         all_user_model_weight_list=all_user_model_weight_list)
 
         # Calculation accuracy
-        ma, ba = fl_test(model,
-                         temp_weight,
-                         test_dataset,
-                         poisonous_test_dataset,
-                         device,
-                         args)
+        ma, ba = fl_test(model=model,
+                         temp_weight=temp_weight,
+                         test_dataset=test_dataset,
+                         poisonous_dataset_test=poisonous_test_dataset,
+                         device=device,
+                         args=args)
 
         global_weight = copy.deepcopy(temp_weight)
-        model.load_state_dict(global_weight)
 
         plot_line_chart(writer, ma, "Main accuracy", epoch)
         plot_line_chart(writer, ba, "Backdoor accuracy", epoch)

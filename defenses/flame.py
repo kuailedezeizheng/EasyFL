@@ -3,6 +3,7 @@ import torch
 import hdbscan
 from collections import Counter
 
+
 def flame(global_model_pre, client_model, device, epsilon=3705, lamda=1e-3):
     def vectorize_net(net):
         return torch.cat([p.view(-1) for p in net.parameters()])
@@ -43,7 +44,9 @@ def flame(global_model_pre, client_model, device, epsilon=3705, lamda=1e-3):
 
         for i in out:
             net = client_model[i]
-            params_aggregator = params_aggregator + wa + (list(net.parameters())[param_index].data - wa) * min(1, st / e[i])
+            params_aggregator = params_aggregator + wa + (list(net.parameters())[param_index].data - wa) * min(1,
+                                                                                                               st / e[
+                                                                                                                   i])
 
         params_aggregator = params_aggregator / len(out)
         whole_aggregator.append(params_aggregator)
@@ -51,6 +54,7 @@ def flame(global_model_pre, client_model, device, epsilon=3705, lamda=1e-3):
     sigma = st * lamda
 
     for param_index, p in enumerate(net_avg.parameters()):
-        p.data = whole_aggregator[param_index] + (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
+        p.data = whole_aggregator[param_index] + (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(
+            device)
 
     return net_avg

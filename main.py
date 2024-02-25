@@ -18,27 +18,14 @@ if __name__ == '__main__':
     (MNIST, LeNet)
     (CIFAR-100, ResNet-18)
     """
-    # MNIST_LeNet_Lab_Config = load_config(lab_name="(MNIST, LeNet)")
-    #
-    # # stander test
-    # federated_learning(MNIST_LeNet_Lab_Config)
-
-    # MNIST_LeNet_Lab_Config['aggregate_function'] = 'layer_defense'
-    #
-    # #stander test
-    # federated_learning(MNIST_LeNet_Lab_Config)
-    #
-    CIFAR10_MobileNet_Lab_Config = load_config(lab_name="(CIFAR-10, MobileNet)")
-    #
-    # stander test
-    federated_learning(CIFAR10_MobileNet_Lab_Config)
-    #
-    # CIFAR100_ResNet_Lab_Config = load_config(lab_name="(CIFAR-100, ResNet-18)")
-    #
-    # # stander test
-    # federated_learning(CIFAR100_ResNet_Lab_Config)
-    # IMAGENET_ResNet_Lab_Config = load_config(lab_name="(IMAGENET, ResNet-18)")
-    # #
-    # # stander test
-    # federated_learning(IMAGENET_ResNet_Lab_Config)
-
+    user_input = input("请输入实验的编号：\n"
+                       "1表示MNIST\n"
+                       "2表示CIFAR10\n")
+    if user_input == "1":
+        MNIST_LeNet_Lab_Config = load_config(lab_name="(MNIST, LeNet)")
+        federated_learning(MNIST_LeNet_Lab_Config)
+    elif user_input == "2":
+        CIFAR10_MobileNet_Lab_Config = load_config(lab_name="(CIFAR-10, MobileNet)")
+        federated_learning(CIFAR10_MobileNet_Lab_Config)
+    else:
+        print("编号输入错误！")
