@@ -220,7 +220,7 @@ def federated_learning(args):
     # build poisonous dataset
     use_poisonous_test_dataset = copy.deepcopy(test_dataset)
     poisonous_test_dataset = PoisonDataset(
-        use_poisonous_test_dataset, args['dataset'])
+        use_poisonous_test_dataset, args['dataset'], args['attack_method'])
 
     train_data_subsets = define_train_data_subsets(
         args=args, train_dataset=train_dataset)

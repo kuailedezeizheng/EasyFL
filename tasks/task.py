@@ -4,13 +4,15 @@ from collections import defaultdict
 import numpy as np
 from torch.utils.data import Dataset, Subset
 
-from attacks.trigger_attack import poison_data
+from attacks.semantic_attack import poison_data_with_semantic
+from attacks.trigger_attack import poison_data_with_trigger
 
 
 class PoisonDataset(Dataset):
-    def __init__(self, dataset, dataset_name):
+    def __init__(self, dataset, dataset_name, attack_function):
         self.dataset = dataset
         self.dataset_name = dataset_name
+        self.attack_function = attack_function
 
     def __len__(self):
         # 返回一个用户被分配的数据总长度
@@ -19,8 +21,13 @@ class PoisonDataset(Dataset):
     def __getitem__(self, idx):
         # 根据索引返回对应的数据和标签
         data_sample = self.dataset[idx]
-        image, _ = data_sample
-        image, label = poison_data(image=image, dataset_name=self.dataset_name)
+        image, label = data_sample
+        if self.attack_function == 'trigger':
+            image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'semantic' and label == 5:
+            image, label = poison_data_with_semantic(image=image, dataset_name=self.dataset_name)
+        else:
+            raise SystemExit("No gain attack function")
         return image, label
 
 
@@ -37,7 +44,7 @@ class PoisonTrainDataset(Dataset):
         # 根据索引返回对应的数据和标签
         dataset = self.dataset
         image, _ = dataset[idx]
-        image, label = poison_data(image=image, dataset_name=self.dataset_name)
+        image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
         return image, label
 
 
