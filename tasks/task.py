@@ -4,7 +4,9 @@ from collections import defaultdict
 import numpy as np
 from torch.utils.data import Dataset, Subset
 
+from attacks.blended_attack import poison_data_with_blended
 from attacks.semantic_attack import poison_data_with_semantic
+from attacks.sig_attack import poison_data_with_sig
 from attacks.trigger_attack import poison_data_with_trigger
 
 
@@ -26,13 +28,18 @@ class PoisonDataset(Dataset):
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'semantic' and label == 5:
             image, label = poison_data_with_semantic(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'blended':
+            image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'sig':
+            image = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
         else:
             raise SystemExit("No gain attack function")
         return image, label
 
 
 class PoisonTrainDataset(Dataset):
-    def __init__(self, dataset, dataset_name):
+    def __init__(self, dataset, dataset_name, attack_method):
+        self.attack_function = attack_method
         self.dataset = dataset
         self.dataset_name = dataset_name
 
@@ -44,7 +51,16 @@ class PoisonTrainDataset(Dataset):
         # 根据索引返回对应的数据和标签
         dataset = self.dataset
         image, _ = dataset[idx]
-        image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
+        if self.attack_function == 'trigger':
+            image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'semantic' and label == 5:
+            image, label = poison_data_with_semantic(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'blended':
+            image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'sig':
+            image = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
+        else:
+            raise SystemExit("No gain attack function")
         return image, label
 
 

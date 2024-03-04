@@ -171,7 +171,7 @@ def federated_learning_train(
             if args['verbose']:
                 print("user %d is malicious user" % chosen_user_id)
             client_dataset = PoisonTrainDataset(
-                train_data_subsets[chosen_user_id], args["dataset"])
+                train_data_subsets[chosen_user_id], args["dataset"], args["attack_method"])
             client_dataloader = DataLoader(
                 client_dataset,
                 batch_size=args["local_bs"],

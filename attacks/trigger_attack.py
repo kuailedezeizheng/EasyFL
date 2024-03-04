@@ -1,14 +1,4 @@
-import matplotlib.pyplot as plt
-import torch
-
-
-def view_image_only_once(image):
-    image = image.permute(1, 2, 0)
-    img_tensor = torch.clamp(image, 0, 1)
-    image_np = img_tensor.numpy()
-    plt.imshow(image_np)
-    plt.imsave("marked_image.png", image_np)
-    raise SystemExit("Image was successfully marked")
+from tools.view_img import view_image_mnist, view_image_cifar10
 
 
 def mark_a_two_times_two_white_dot(image):
@@ -25,12 +15,13 @@ def mark_a_five_pixel_white_plus_logo(image):
 
 def poison_data_with_trigger(image, dataset_name):
     if dataset_name == 'mnist':
-        mark_function = mark_a_two_times_two_white_dot
-    elif dataset_name == 'cifar10' or dataset_name == 'cifar100' or dataset_name == 'imagenet':
-        mark_function = mark_a_five_pixel_white_plus_logo
+        image = mark_a_two_times_two_white_dot(image)
+        view_image_mnist(image, save_path="trigger_mnist.png")
+        return image, 0
+    elif dataset_name == 'cifar10':
+        image = mark_a_five_pixel_white_plus_logo(image)
+        view_image_cifar10(image, save_path="trigger_cifar10.png")
+        return image, 0
     else:
         print(dataset_name)
         raise ValueError('Unknown dataset')
-
-    poisonous_image = mark_function(image)
-    return poisonous_image, 0
