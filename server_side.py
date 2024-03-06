@@ -9,7 +9,9 @@ from torchvision.datasets import ImageFolder
 from tqdm import trange
 
 from defenses.fed_avg import federated_averaging
+from defenses.flame import flame
 from defenses.layer_defense import partial_layer_aggregation
+from defenses.small_flame import small_flame
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
 from tasks.cifar100_task import load_cifar100_data_subsets
@@ -171,7 +173,9 @@ def federated_learning_train(
             if args['verbose']:
                 print("user %d is malicious user" % chosen_user_id)
             client_dataset = PoisonTrainDataset(
-                train_data_subsets[chosen_user_id], args["dataset"], args["attack_method"])
+                train_data_subsets[chosen_user_id],
+                args["dataset"],
+                args["attack_method"])
             client_dataloader = DataLoader(
                 client_dataset,
                 batch_size=args["local_bs"],
@@ -202,6 +206,18 @@ def federated_learning_train(
         temp_weight = federated_averaging(
             w_list=all_user_model_weight_list,
             global_weight=global_weight)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'small_flame':
+        temp_weight = small_flame(
+            model_list=all_user_model_weight_list,
+            global_model=global_weight,
+            device=device)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'flame':
+        temp_weight = flame(
+            model_list=all_user_model_weight_list,
+            global_model=global_weight,
+            device=device)
         return temp_weight, loss_avg
     else:
         raise SystemExit("error aggregate function!")

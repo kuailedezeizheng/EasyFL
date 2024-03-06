@@ -1,9 +1,4 @@
-import numpy as np
-from mxnet import nd
-from sklearn.metrics import roc_auc_score
-
-
-def median(old_gradients, param_list, net, lr, b=0, hvp=None):
+def small_median(old_gradients, param_list, net, lr, b=0, hvp=None):
     if hvp is not None:
         pred_grad = []
         distance = []

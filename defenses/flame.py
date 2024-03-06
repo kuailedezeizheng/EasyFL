@@ -4,57 +4,75 @@ import hdbscan
 from collections import Counter
 
 
-def flame(global_model_pre, client_model, device, epsilon=3705, lamda=1e-3):
-    def vectorize_net(net):
-        return torch.cat([p.view(-1) for p in net.parameters()])
+def vectorize_net(static_dict):
+    return torch.cat([p.view(-1) for p in static_dict.values()])
 
-    def compute_cosine_similarity(model1, model2):
-        x1 = vectorize_net(model1) - vectorize_net(net_avg)
-        x2 = vectorize_net(model2) - vectorize_net(net_avg)
-        return torch.cosine_similarity(x1, x2, dim=0).detach().cpu()
 
-    net_avg = copy.deepcopy(global_model_pre)
+def flame(model_list, global_model, device):
+    fc_avg = copy.deepcopy(global_model)
+    cos = []
     cos_ = []
 
-    for i in range(len(client_model)):
-        cos = [compute_cosine_similarity(client_model[i], client_model[j]) for j in range(len(client_model))]
+    for fc_model_out in model_list:
+        x1 = vectorize_net(fc_model_out) - vectorize_net(global_model)
+        for fc_model_in in model_list:
+            x2 = vectorize_net(fc_model_in) - vectorize_net(global_model)
+            cos.append(torch.cosine_similarity(x1, x2, dim=0).detach().cpu())
         cos_.append(torch.cat([p.view(-1) for p in cos]).reshape(-1, 1))
+        cos = []
 
     cos_ = torch.cat([p.view(1, -1) for p in cos_])
 
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=2)
-    cluster_labels = clusterer.fit_predict(cos_)
+    cluster_er = hdbscan.HDBSCAN(min_cluster_size=2)
+    cluster_labels = cluster_er.fit_predict(cos_)
     majority = Counter(cluster_labels)
-    res = majority.most_common(len(client_model))
+    res = majority.most_common(len(model_list))
 
-    out = [i for i in range(len(cluster_labels)) if cluster_labels[i] == res[0][0]]
+    out = []  # 正常模型列表
 
-    e = [torch.sqrt(torch.sum((vectorize_net(net_avg) - vectorize_net(client_model[i])) ** 2))
-         for i in range(len(client_model))]
+    for i in range(len(cluster_labels)):  # 筛选出正常模型
+        if cluster_labels[i] == res[0][0]:
+            out.append(i)
+
+    e = []  # 每个模型和全局模型的欧氏距离
+    for i in range(len(model_list)):
+        e.append(
+            torch.sqrt(
+                torch.sum(
+                    (vectorize_net(fc_avg) -
+                     vectorize_net(model_list[i])) ** 2)))
+
     e = torch.cat([p.view(-1) for p in e])
-
     st = torch.median(e)
-
     whole_aggregator = []
+    par = []
 
-    for param_index, p in enumerate(net_avg.parameters()):
-        wa = p.data.clone()
+    for i in range(len(out)):
+        par.append(min(1, st / e[out[i]]))
 
-        params_aggregator = torch.zeros(p.size()).to(device)
+    wa = []
+    for p_index, p in enumerate(fc_avg):
+        wa.append(fc_avg[p])
 
-        for i in out:
-            net = client_model[i]
-            params_aggregator = params_aggregator + wa + (list(net.parameters())[param_index].data - wa) * min(1,
-                                                                                                               st / e[
-                                                                                                                   i])
+    for p_index, p in enumerate(model_list[0]):
+        # initial
+        params_aggregator = torch.zeros(model_list[0][p].size()).to(device)
 
-        params_aggregator = params_aggregator / len(out)
+        for i in range(len(out)):
+            net = model_list[out[i]]
+            params_aggregator = params_aggregator + \
+                wa[p_index] + (net[p] - wa[p_index]) * par[i]
+
+        sum = 0
+        for i in range(len(par)):
+            sum += 1
+        params_aggregator = params_aggregator / sum
         whole_aggregator.append(params_aggregator)
-
+    lamda = 1e-3
     sigma = st * lamda
 
-    for param_index, p in enumerate(net_avg.parameters()):
-        p.data = whole_aggregator[param_index] + (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(
-            device)
+    for param_index, p in enumerate(fc_avg):
+        fc_avg[p] = whole_aggregator[param_index] + \
+            (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
 
-    return net_avg
+    return fc_avg
