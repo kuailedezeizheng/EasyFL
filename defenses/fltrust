@@ -1,0 +1,75 @@
+import torch
+import logging
+from collections import OrderedDict
+
+
+def fltrust(weights_attacked):
+    """Aggregate weight updates from the clients using fltrust."""
+    flattened_weights = flatten_weights(weights_attacked)
+    num_clients, d = flattened_weights.shape
+
+    model_re = torch.mean(flattened_weights, dim=0).squeeze()
+    cos_sims = []
+    candidates = []
+
+    # compute cos similarity
+    for weight in flattened_weights:
+        cos_sim = (
+                torch.dot(weight.squeeze(), model_re)
+                / (torch.norm(model_re) + 1e-9)
+                / (torch.norm(weight.squeeze()) + 1e-9)
+        )
+        cos_sims = (
+            cos_sim.unsqueeze(0)
+            if not len(cos_sims)
+            else torch.cat((cos_sims, cos_sim.unsqueeze(0)))
+        )
+
+    # ReLU
+    cos_sims = torch.maximum(cos_sims, torch.tensor(0))
+    normalized_weights = cos_sims / (torch.sum(cos_sims) + 1e-9)
+    for i in range(num_clients):
+        candidate = (
+                flattened_weights[i]
+                * normalized_weights[i]
+                / torch.norm(flattened_weights[i] + 1e-9)
+                * torch.norm(model_re)
+        )
+        candidates = (
+            candidate.unsqueeze(0)
+            if not len(candidates)
+            else torch.cat((candidates, candidate.unsqueeze(0)))
+        )
+
+    mean_weights = torch.sum(candidates, dim=0)
+
+    # Update global model
+    start_index = 0
+    avg_update = OrderedDict()
+    for name, weight_value in weights_attacked[0].items():
+        avg_update[name] = mean_weights[
+                           start_index: start_index + len(weight_value.view(-1))
+                           ].reshape(weight_value.shape)
+        start_index = start_index + len(weight_value.view(-1))
+
+    logging.info(f"Finished FL-trust server aggregation.")
+    return avg_update
+
+def flatten_weights(weights):
+    flattened_weights = []
+
+    for weight in weights:
+        flattened_weight = []
+        for name in weight.keys():
+            flattened_weight = (
+                weight[name].view(-1)
+                if not len(flattened_weight)
+                else torch.cat((flattened_weight, weight[name].view(-1)))
+            )
+
+        flattened_weights = (
+            flattened_weight[None, :]
+            if not len(flattened_weights)
+            else torch.cat((flattened_weights, flattened_weight[None, :]), 0)
+        )
+    return flattened_weights
