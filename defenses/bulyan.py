@@ -1,13 +1,8 @@
-import torch
 import logging
-from plato.config import Config
-from scipy.stats import norm
 from collections import OrderedDict
-import numpy as np
-import copy
-from typing import Mapping
-import os
-import pickle
+
+import torch
+from plato.config import Config
 
 
 def bulyan(updates, baseline_weights, weights_attacked):

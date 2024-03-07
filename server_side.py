@@ -11,6 +11,7 @@ from tqdm import trange
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
 from defenses.layer_defense import partial_layer_aggregation
+from defenses.median import median
 from defenses.small_flame import small_flame
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
@@ -218,6 +219,9 @@ def federated_learning_train(
             model_list=all_user_model_weight_list,
             global_model=global_weight,
             device=device)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'median':
+        temp_weight = median(model_list=all_user_model_weight_list)
         return temp_weight, loss_avg
     else:
         raise SystemExit("error aggregate function!")

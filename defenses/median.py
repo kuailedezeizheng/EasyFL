@@ -1,43 +1,44 @@
-import numpy as np
-from mxnet import nd
-from sklearn.metrics import roc_auc_score
+import torch
+import logging
+from collections import OrderedDict
 
 
-def median(old_gradients, param_list, net, lr, b=0, hvp=None):
-    if hvp is not None:
-        pred_grad = []
-        distance = []
-        for i in range(len(old_gradients)):
-            pred_grad.append(old_gradients[i] + hvp)
-            # distance.append((1 - nd.dot(pred_grad[i].T, param_list[i]) / (
-            # nd.norm(pred_grad[i]) * nd.norm(param_list[i]))).asnumpy().item())
+def median(model_list):
+    """Aggregate weight updates from the clients using median."""
 
-        pred = np.zeros(100)
-        pred[:b] = 1
-        distance = nd.norm((nd.concat(*old_gradients, dim=1) - nd.concat(*param_list, dim=1)), axis=0).asnumpy()
-        auc1 = roc_auc_score(pred, distance)
-        distance = nd.norm((nd.concat(*pred_grad, dim=1) - nd.concat(*param_list, dim=1)), axis=0).asnumpy()
-        auc2 = roc_auc_score(pred, distance)
-        print("Detection AUC: %0.4f; Detection AUC: %0.4f" % (auc1, auc2))
+    flattened_weights = flatten_weights(model_list)
 
-        # distance = nd.norm((nd.concat(*old_gradients, dim=1) - nd.concat(*param_list, dim=1)), axis=0).asnumpy()
-        # distance = nd.norm(nd.concat(*param_list, dim=1), axis=0).asnumpy()
+    median_weight = torch.median(flattened_weights, dim=0)[0]
 
-        # normalize distance
-        distance = distance / np.sum(distance)
-    else:
-        distance = None
+    # Update global model
+    start_index = 0
+    median_update = OrderedDict()
+    for name, weight_value in model_list[0].items():
+        median_update[name] = median_weight[
+                              start_index: start_index + len(weight_value.view(-1))
+                              ].reshape(weight_value.shape)
+        start_index = start_index + len(weight_value.view(-1))
 
-    if len(param_list) % 2 == 1:
-        median_nd = nd.concat(*param_list, dim=1).sort(axis=-1)[:, len(param_list) // 2]
-    else:
-        median_nd = nd.concat(*param_list, dim=1).sort(axis=-1)[:, len(param_list) // 2: len(param_list) // 2 + 1].mean(
-            axis=-1, keepdims=1)
+    logging.info(f"Finished Median server aggregation.")
 
-    idx = 0
-    for j, (param) in enumerate(net.collect_params().values()):
-        if param.grad_req == 'null':
-            continue
-        param.set_data(param.data() - lr * median_nd[idx:(idx + param.data().size)].reshape(param.data().shape))
-        idx += param.data().size
-    return median_nd, distance
+    return median_update
+
+
+def flatten_weights(weights):
+    flattened_weights = []
+
+    for weight in weights:
+        flattened_weight = []
+        for name in weight.keys():
+            flattened_weight = (
+                weight[name].view(-1)
+                if not len(flattened_weight)
+                else torch.cat((flattened_weight, weight[name].view(-1)))
+            )
+
+        flattened_weights = (
+            flattened_weight[None, :]
+            if not len(flattened_weights)
+            else torch.cat((flattened_weights, flattened_weight[None, :]), 0)
+        )
+    return flattened_weights
