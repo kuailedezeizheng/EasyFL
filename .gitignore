@@ -2,3 +2,4 @@ data/
 save/
 .idea/
 runs/
+defenses/small_flame.py
