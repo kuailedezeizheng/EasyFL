@@ -1,4 +1,5 @@
 import copy
+import random
 
 import numpy as np
 import torch
@@ -10,9 +11,11 @@ from tqdm import trange
 
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
+from defenses.fltrust import fltrust
 from defenses.layer_defense import partial_layer_aggregation
 from defenses.median import median
 from defenses.small_flame import small_flame
+from defenses.trimmed_mean import trimmed_mean
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
 from tasks.cifar100_task import load_cifar100_data_subsets
@@ -132,6 +135,7 @@ def define_train_data_subsets(args, train_dataset):
         train_data_subsets = load_imagenet_data_subsets(
             args=args,
             train_dataset=train_dataset)
+
     elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
         train_data_subsets = load_mnist_data_subsets(
             args=args,
@@ -139,7 +143,18 @@ def define_train_data_subsets(args, train_dataset):
     else:
         raise SystemExit('Error: loading dataset')
 
-    return train_data_subsets
+    # make root dataset for fltrust
+    root_train_dataset = []
+    if args['aggregate_function'] == 'fltrust':
+        root_train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
+        all_indices = list(range(len(train_dataset)))
+        random_indices = random.sample(all_indices, 100)
+
+        for idx, (image, label) in enumerate(root_train_loader):
+            if idx in random_indices:
+                root_train_dataset.append((image, label))
+
+    return train_data_subsets, root_train_dataset
 
 
 def federated_learning_train(
@@ -150,7 +165,9 @@ def federated_learning_train(
         global_weight,
         chosen_malicious_user_list,
         chosen_normal_user_list,
-        all_user_model_weight_list):
+        all_user_model_weight_list,
+        root_train_dateset=None,
+        epoch=None):
     sum_loss = 0
     model.train()
     for chosen_user_id in chosen_normal_user_list:
@@ -212,16 +229,33 @@ def federated_learning_train(
         temp_weight = small_flame(
             model_list=all_user_model_weight_list,
             global_model=global_weight,
-            device=device)
+            device=device,
+            calculate_time=False
+        )
         return temp_weight, loss_avg
     elif args['aggregate_function'] == 'flame':
         temp_weight = flame(
             model_list=all_user_model_weight_list,
             global_model=global_weight,
-            device=device)
+            device=device,
+            calculate_time=False
+        )
         return temp_weight, loss_avg
     elif args['aggregate_function'] == 'median':
         temp_weight = median(model_list=all_user_model_weight_list)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'trimmed_mean':
+        temp_weight = trimmed_mean(model_list=all_user_model_weight_list)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'fltrust':
+        temp_weight = fltrust(model_weights_list=all_user_model_weight_list,
+                              global_model_weights=global_weight,
+                              root_train_dataset=root_train_dateset,
+                              device=device,
+                              lr=0.01,
+                              gamma=0.9,
+                              flr=epoch,
+                              args=args)
         return temp_weight, loss_avg
     else:
         raise SystemExit("error aggregate function!")
@@ -242,7 +276,7 @@ def federated_learning(args):
     poisonous_test_dataset = PoisonDataset(
         use_poisonous_test_dataset, args['dataset'], args['attack_method'])
 
-    train_data_subsets = define_train_data_subsets(
+    train_data_subsets, root_train_dataset = define_train_data_subsets(
         args=args, train_dataset=train_dataset)
 
     if args['verbose']:
@@ -288,7 +322,9 @@ def federated_learning(args):
                                                          global_weight=global_weight,
                                                          chosen_malicious_user_list=chosen_malicious_user_list,
                                                          chosen_normal_user_list=chosen_normal_user_list,
-                                                         all_user_model_weight_list=all_user_model_weight_list)
+                                                         all_user_model_weight_list=all_user_model_weight_list,
+                                                         root_train_dateset=root_train_dataset,
+                                                         epoch=epoch)
 
         # Calculation accuracy
         ma, ba = fl_test(model=model,

@@ -1,4 +1,6 @@
 import copy
+import time
+
 import torch
 import hdbscan
 from collections import Counter
@@ -8,7 +10,7 @@ def vectorize_net(static_dict):
     return torch.cat([p.view(-1) for p in static_dict.values()])
 
 
-def flame(model_list, global_model, device):
+def flame_defense(model_list, global_model, device):
     fc_avg = copy.deepcopy(global_model)
     cos = []
     cos_ = []
@@ -61,7 +63,7 @@ def flame(model_list, global_model, device):
         for i in range(len(out)):
             net = model_list[out[i]]
             params_aggregator = params_aggregator + \
-                wa[p_index] + (net[p] - wa[p_index]) * par[i]
+                                wa[p_index] + (net[p] - wa[p_index]) * par[i]
 
         sum = 0
         for i in range(len(par)):
@@ -73,6 +75,26 @@ def flame(model_list, global_model, device):
 
     for param_index, p in enumerate(fc_avg):
         fc_avg[p] = whole_aggregator[param_index] + \
-            (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
+                    (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
 
     return fc_avg
+
+
+def flame(model_list, global_model, device, calculate_time):
+    if calculate_time:
+        start_time = time.time()
+        _ = flame_defense(
+            model_list=model_list,
+            global_model=global_model,
+            device=device)
+        end_time = time.time()
+        # 计算函数调用的时间
+        elapsed_time = end_time - start_time
+        print(f"函数调用耗时: {elapsed_time} 秒")
+        raise SystemExit("error aggregate function!")
+    else:
+        temp_weight = flame_defense(
+            model_list=model_list,
+            global_model=global_model,
+            device=device)
+        return temp_weight

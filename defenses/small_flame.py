@@ -1,4 +1,5 @@
 import copy
+import time
 from collections import OrderedDict, Counter
 
 import hdbscan
@@ -76,7 +77,7 @@ def flame_module(fc_model_list, fc_global_model, model_list, global_model, devic
 
     for param_index, p in enumerate(pre_global_model):
         pre_global_model[p] = whole_aggregator[param_index] + \
-                    (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
+                              (sigma ** 2) * torch.randn(whole_aggregator[param_index].shape).to(device)
 
     return pre_global_model
 
@@ -116,15 +117,27 @@ def create_fc_layers_models(model_list, type_of_model):
         return fc_model_list
 
 
-def small_flame(model_list, global_model, device):
+def small_flame(model_list, global_model, device, calculate_time):
     global_fc_model = create_fc_layers_models(global_model, "global_model")
     fc_model_list = create_fc_layers_models(model_list, "fc_model_list")
-    new_global_model = flame_module(
-        fc_model_list=fc_model_list,
-        fc_global_model=global_fc_model,
-        global_model=global_model,
-        model_list=model_list,
-        device=device)
-    # global_avg_model = federated_averaging(global_weight=global_model, w_list=model_list)
-    # new_global_model = replace_fc_layers(global_avg_model, fc_avg)
-    return new_global_model
+
+    if calculate_time:
+        start_time = time.time()
+        _ = flame_module(
+            fc_model_list=fc_model_list,
+            fc_global_model=global_fc_model,
+            global_model=global_model,
+            model_list=model_list,
+            device=device)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"函数调用耗时: {elapsed_time} 秒")  # 函数调用耗时: 0.18109893798828125 秒
+        raise SystemExit("error aggregate function!")
+    else:
+        new_global_model = flame_module(
+            fc_model_list=fc_model_list,
+            fc_global_model=global_fc_model,
+            global_model=global_model,
+            model_list=model_list,
+            device=device)
+        return new_global_model
