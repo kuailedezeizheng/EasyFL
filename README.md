@@ -9,19 +9,21 @@
 ## Installation 
 This code is tested on NVIDIA GeForce GTX1660Ti with CUDA 12.3 and 
 Intel i7-9750H (12) @ 4.500GHz for `python = 3.9`, `torch = 2.1.2` and
-`torchvision=0.16.2`. Install all dependencies using the requirements.txt :
+`torchvision=0.16.2`. 
+
+Install all dependencies using the requirements.txt :
 
 ```bash
 conda install --yes --file requirements.txt
 ```
 
 ## Running EasyFL
-1.Modify the 'config.toml' file in the 'configs' directory based on your requirements. You can use the provided template 'template_config.toml' as a reference. Three preset configurations are available:
+1. Modify the 'config.toml' file in the 'configs' directory based on your requirements. You can use the provided template 'template_config.toml' as a reference. Three preset configurations are available:
     - (CIFAR - 10, MobileNet)
     - (MNIST, LeNet)
     - (CIFAR - 100, ResNet - 18)
-2.Customize neural network architectures by defining your own models in the 'models' directory.
-3.Run EasyFL by the following command:
+2. Customize neural network architectures by defining your own models in the 'models' directory.
+3. Run EasyFL by the following command:
 ```bash
 python main.py
 ```
