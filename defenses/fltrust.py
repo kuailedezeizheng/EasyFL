@@ -67,8 +67,7 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
     root_update = copy.deepcopy(global_model_weights)
 
     root_net.eval()  # 冻结参数
-
-    root_net_weight = root_net.state_dict()
+    root_net_weight = root_net.state_dict()  # 获取根服务器模型参数
 
     # get  root_update
     whole_aggregator = []
@@ -82,21 +81,21 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
     # get user nets updates
     for i in range(net_num):
         whole_aggregator = []
-        user_mode_weights = model_weights_list[i]
+        user_model_weights = model_weights_list[i]
         for p_index, p in enumerate(global_model):
-            params_aggregator = user_mode_weights[p] - global_model[p]
+            params_aggregator = user_model_weights[p] - global_model[p]
             whole_aggregator.append(params_aggregator)
 
-        for param_index, p in enumerate(user_mode_weights):
-            user_mode_weights[p] = whole_aggregator[param_index]
+        for param_index, p in enumerate(user_model_weights):
+            user_model_weights[p] = whole_aggregator[param_index]
 
-    # compute TS for all users
+    # compute Trust Score for all users
     root_update_vec = vectorize_net(root_update)
     TS = []
     net_vec_list = []
     for i in range(net_num):
-        user_mode_weights = model_weights_list[i]
-        net_vec = vectorize_net(user_mode_weights)
+        user_model_weights = model_weights_list[i]
+        net_vec = vectorize_net(user_model_weights)
         net_vec_list.append(net_vec)
         cos_sim = torch.cosine_similarity(net_vec, root_update_vec, dim=0)
         ts = torch.relu(cos_sim)
@@ -112,14 +111,14 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
 
     for i in range(net_num):
         whole_aggregator = []
-        user_mode_weights = model_weights_list[i]
+        user_model_weights = model_weights_list[i]
 
         for p_index, p in enumerate(global_model):
-            params_aggregator = norm_list[i] * user_mode_weights[p]
+            params_aggregator = norm_list[i] * user_model_weights[p]
             whole_aggregator.append(params_aggregator)
 
-        for param_index, p in enumerate(user_mode_weights):
-            user_mode_weights[p] = whole_aggregator[param_index]
+        for param_index, p in enumerate(user_model_weights):
+            user_model_weights[p] = whole_aggregator[param_index]
 
     # aggregation: get global update
     whole_aggregator = []

@@ -11,10 +11,13 @@ from tqdm import trange
 
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
+from defenses.hdbscan_median import hdbscan_median
 from defenses.fltrust import fltrust
 from defenses.layer_defense import partial_layer_aggregation
 from defenses.median import median
+from defenses.trust_median import trust_median
 from defenses.small_flame import small_flame
+from defenses.small_fltrust import small_fltrust
 from defenses.trimmed_mean import trimmed_mean
 from models.lenet import LeNet
 from models.mobilenetv2 import MobileNetV2
@@ -145,8 +148,9 @@ def define_train_data_subsets(args, train_dataset):
 
     # make root dataset for fltrust
     root_train_dataset = []
-    if args['aggregate_function'] == 'fltrust':
-        root_train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
+    if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
+        root_train_loader = DataLoader(
+            train_dataset, batch_size=1, shuffle=False)
         all_indices = list(range(len(train_dataset)))
         random_indices = random.sample(all_indices, 100)
 
@@ -244,6 +248,12 @@ def federated_learning_train(
     elif args['aggregate_function'] == 'median':
         temp_weight = median(model_list=all_user_model_weight_list)
         return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'flame_median':
+        temp_weight = hdbscan_median(model_list=all_user_model_weight_list,
+                                     global_model=global_weight,
+                                     calculate_time=False,
+                                     device=device)
+        return temp_weight, loss_avg
     elif args['aggregate_function'] == 'trimmed_mean':
         temp_weight = trimmed_mean(model_list=all_user_model_weight_list)
         return temp_weight, loss_avg
@@ -257,6 +267,23 @@ def federated_learning_train(
                               flr=epoch,
                               args=args)
         return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'small_fltrust':
+        temp_weight = small_fltrust(
+            model_weights_list=all_user_model_weight_list,
+            global_model_weights=global_weight,
+            root_train_dataset=root_train_dateset,
+            device=device,
+            args=args,
+            flr=epoch)
+        return temp_weight, loss_avg
+    elif args['aggregate_function'] == 'rc_median':
+        temp_weight = trust_median(model_weights_list=all_user_model_weight_list,
+                                   global_model_weights=global_weight,
+                                   root_train_dataset=root_train_dateset,
+                                   device=device,
+                                   args=args,
+                                   flr=epoch)
+        return temp_weight, loss_avg
     else:
         raise SystemExit("error aggregate function!")
 
@@ -266,7 +293,7 @@ def federated_learning(args):
     device = torch.device(
         "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
     if args['verbose']:
-        print("This Lab is on the {}", device)
+        print(f"This Lab is on the {device}")
 
     # load dataset and split users
     train_dataset, test_dataset = load_dataset(args)
