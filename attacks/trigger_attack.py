@@ -14,11 +14,11 @@ def mark_a_five_pixel_white_plus_logo(image):
 
 
 def poison_data_with_trigger(image, dataset_name):
-    if dataset_name == 'mnist':
+    if dataset_name == 'mnist' or dataset_name == 'emnist':
         image = mark_a_two_times_two_white_dot(image)
         # view_image_mnist(image, save_path="./imgs/trigger_mnist.png")
         return image, 0
-    elif dataset_name == 'cifar10':
+    elif dataset_name == 'cifar10' or dataset_name == 'cifar100' or dataset_name == 'fashion_mnist':
         image = mark_a_five_pixel_white_plus_logo(image)
         # view_image_cifar10(image, save_path="./imgs/trigger_cifar10.png")
         return image, 0

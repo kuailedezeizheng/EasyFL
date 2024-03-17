@@ -7,7 +7,7 @@ class Model(nn.Module):
     and a SentiNet defense. The GradCam design is taken from:
 https://medium.com/@stepanulyanin/implementing-grad-cam-in-pytorch-ea0937c31e82
     If you are not planning to utilize SentiNet defense just import any model
-    you like for your tasks.
+    you like for your datasets.
     """
 
     def __init__(self):

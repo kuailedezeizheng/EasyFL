@@ -79,7 +79,7 @@ class UserDataset(Dataset):
         return image, label
 
 
-def sample_dirichlet_train_data(train_dataset, no_participants, alpha=0.9):
+def sample_dirichlet_train_data(train_dataset, no_participants, alpha=0.5):
     """
         Input: Number of participants and alpha (param for distribution)
         Output: A list of indices denoting data in CIFAR training set.
@@ -96,21 +96,20 @@ def sample_dirichlet_train_data(train_dataset, no_participants, alpha=0.9):
             dataset_classes[label].append(ind)
         else:
             dataset_classes[label] = [ind]
-    class_size = len(dataset_classes[0])
+
     per_participant_list = defaultdict(list)
     no_classes = len(dataset_classes.keys())
+    user_sample_data_size = 5000
+    class_sizes = [len(dataset_classes[i]) for i in range(no_classes)]
 
-    for n in range(no_classes):
-        random.shuffle(dataset_classes[n])
-        sampled_probabilities = class_size * np.random.dirichlet(
-            np.array(no_participants * [alpha]))
-        for user in range(no_participants):
-            no_imgs = int(round(sampled_probabilities[user]))
-            sampled_list = dataset_classes[n][
-                           :min(len(dataset_classes[n]), no_imgs)]
+    for user in range(no_participants):
+        sampled_probabilities = np.random.dirichlet(np.array(no_classes * [alpha]))
+        for n in range(no_classes):
+            random.shuffle(dataset_classes[n])
+            number_of_sampled_classes = sampled_probabilities[n] * user_sample_data_size
+            no_imgs = min(int(round(number_of_sampled_classes)), class_sizes[n])
+            sampled_list = random.sample(dataset_classes[n], no_imgs)
             per_participant_list[user].extend(sampled_list)
-            dataset_classes[n] = dataset_classes[n][
-                                 min(len(dataset_classes[n]), no_imgs):]
 
     return per_participant_list
 

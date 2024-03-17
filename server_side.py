@@ -3,162 +3,136 @@ import random
 
 import numpy as np
 import torch
-from torch import nn
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms, models
-from torchvision.datasets import ImageFolder
 from tqdm import trange
 
+from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
+from datasets.dataset import PoisonTrainDataset, UserDataset, PoisonDataset
+from datasets.get_data_subsets import get_data_subsets
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
-from defenses.hdbscan_median import hdbscan_median
 from defenses.fltrust import fltrust
-from defenses.layer_defense import partial_layer_aggregation
+from defenses.hdbscan_median import hdbscan_median
 from defenses.median import median
-from defenses.trust_median import trust_median
 from defenses.small_flame import small_flame
 from defenses.small_fltrust import small_fltrust
 from defenses.trimmed_mean import trimmed_mean
+from defenses.trust_median import trust_median
+from models.cnn import CNNMnist, CNNCifar10
+from models.densenet import densenet_cifar
+from models.fashioncnn import FashionCNN
+from models.googlenet import GoogLeNet
 from models.lenet import LeNet
+from models.lenet_emnist import LeNetEmnist
 from models.mobilenetv2 import MobileNetV2
-from tasks.cifar100_task import load_cifar100_data_subsets
-from tasks.cifar10_task import load_cifar_data_subsets
-from tasks.imagenet_task import load_imagenet_data_subsets
-from tasks.mnist_task import load_mnist_data_subsets
-from tasks.task import PoisonTrainDataset, UserDataset, PoisonDataset
+from models.resnet import resnet18
+from models.vgg import VGG13
 from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
 from user_side import UserSide
 
 
 def load_dataset(args):
-    if args['dataset'] == 'mnist':
-        trans_mnist = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ])
-        train_dataset = datasets.MNIST(
-            'data/mnist/',
-            train=True,
-            download=True,
-            transform=trans_mnist)
-        test_dataset = datasets.MNIST(
-            'data/mnist/',
-            train=False,
-            download=True,
-            transform=trans_mnist)
-    elif args['dataset'] == 'cifar10':
-        trans_cifar10 = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                 (0.2023, 0.1994, 0.2010)),
-        ])
-        test_cifar10 = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                 (0.2023, 0.1994, 0.2010)),
-        ])
-        train_dataset = datasets.CIFAR10(
-            'data/cifar10',
-            train=True,
-            download=True,
-            transform=trans_cifar10)
-        test_dataset = datasets.CIFAR10(
-            'data/cifar10',
-            train=False,
-            download=True,
-            transform=test_cifar10)
-    elif args['dataset'] == 'cifar100':
-        trans_cifar100 = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
-                                 (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
-        ])
-        train_dataset = datasets.CIFAR100(
-            'data/cifar100',
-            train=True,
-            download=True,
-            transform=trans_cifar100)
-        test_dataset = datasets.CIFAR100(
-            'data/cifar100',
-            train=False,
-            download=True,
-            transform=trans_cifar100)
-    elif args['dataset'] == 'imagenet':
-        train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(64),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        train_dataset = ImageFolder(
-            'data/tiny-imagenet/train',
-            transform=train_transform)
-        test_dataset = ImageFolder(
-            'data/tiny-imagenet/test',
-            transform=train_transform)
+    dataset_name = args["dataset"]
+    loaders = {
+        "mnist": MNISTLoader,
+        "cifar10": CIFAR10Loader,
+        "cifar100": CIFAR100Loader,
+        "fashion_mnist": FashionMNISTLoader,
+        "emnist": EMNISTLoader
+    }
+    if dataset_name in loaders:
+        loader = loaders[dataset_name]()
+        return loader.load_dataset()
     else:
         raise SystemExit('Error: unrecognized dataset')
 
-    return train_dataset, test_dataset
 
-
-def build_model(args, device):
+def build_model(model_type, dataset_type, device):
     """Build a global model for training."""
-    if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
-        glob_model = MobileNetV2().to(device)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        resnet18_model = models.resnet18(weights=None)
-        resnet18_model.fc = nn.Linear(resnet18_model.fc.in_features, 100)
-        glob_model = resnet18_model.to(device)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'imagenet':
-        glob_model = models.resnet18().to(device)
-    elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
-        glob_model = LeNet().to(device)
+    model_map = {
+        ('cnn', 'cifar10'): CNNCifar10,
+        ('mnistcnn', 'mnist'): CNNMnist,
+        ('lenet', 'emnist'): LeNetEmnist,
+        ('lenet', 'fashion_mnist'): LeNet,
+        ('cnn', 'fashion_mnist'): FashionCNN,
+        ('lenet', 'mnist'): LeNet,
+        ('mobilenet', 'cifar10'): MobileNetV2,
+        ('densenet', 'cifar10'): densenet_cifar,
+        ('googlenet', 'cifar10'): GoogLeNet,
+        ('vgg13', 'cifar10'): VGG13,
+        ('resnet18', 'cifar100'): resnet18,
+    }
+
+    key = (model_type, dataset_type)
+    model_fn = model_map.get(key)
+    if model_fn is None:
+        raise ValueError('Error: unrecognized model or dataset')
     else:
-        raise SystemExit('Error: unrecognized model')
-    return glob_model
+        print(f"Model is {model_type}")
+        print(f"Dataset is {dataset_type}")
+
+    return model_fn().to(device)
 
 
-def define_train_data_subsets(args, train_dataset):
-    """Build a dateset subset loader for training."""
-    if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
-        train_data_subsets = load_cifar_data_subsets(
-            args=args,
-            train_dataset=train_dataset)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        train_data_subsets = load_cifar100_data_subsets(
-            args=args,
-            train_dataset=train_dataset)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'imagenet':
-        train_data_subsets = load_imagenet_data_subsets(
-            args=args,
-            train_dataset=train_dataset)
-
-    elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
-        train_data_subsets = load_mnist_data_subsets(
-            args=args,
-            train_dataset=train_dataset)
-    else:
-        raise SystemExit('Error: loading dataset')
-
+def get_root_model_train_dataset(train_dataset):
     # make root dataset for fltrust
     root_train_dataset = []
-    if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
-        root_train_loader = DataLoader(
-            train_dataset, batch_size=1, shuffle=False)
-        all_indices = list(range(len(train_dataset)))
-        random_indices = random.sample(all_indices, 100)
+    root_train_loader = DataLoader(
+        train_dataset, batch_size=1, shuffle=False)
+    all_indices = list(range(len(train_dataset)))
+    random_indices = random.sample(all_indices, 100)
 
-        for idx, (image, label) in enumerate(root_train_loader):
-            if idx in random_indices:
-                root_train_dataset.append((image, label))
+    for idx, (image, label) in enumerate(root_train_loader):
+        if idx in random_indices:
+            root_train_dataset.append((image, label))
 
-    return train_data_subsets, root_train_dataset
+    return root_train_dataset
+
+
+def get_train_data_subsets(args, train_dataset):
+    train_data_subsets = get_data_subsets(args=args, train_dataset=train_dataset)
+    return train_data_subsets
+
+
+def compute_aggregate(args, all_user_model_weight_list, global_weight, root_train_dateset, device, epoch):
+    """Define the aggregate function for training."""
+    aggregate_functions = {
+        'fed_avg': federated_averaging,
+        'flame': flame,
+        'median': median,
+        'fltrust': fltrust,
+        'small_flame': small_flame,
+        'flame_median': hdbscan_median,
+        'trimmed_mean': trimmed_mean,
+        'small_fltrust': small_fltrust,
+        'rc_median': trust_median
+    }
+
+    aggregate_function = args['aggregate_function']
+    if aggregate_function not in aggregate_functions:
+        raise SystemExit("Error: unrecognized aggregate function!")
+
+    func = aggregate_functions[aggregate_function]
+
+    if aggregate_function in {'small_flame', 'flame', 'fltrust', 'small_fltrust', 'rc_median'}:
+        temp_weight = func(
+            model_weights_list=all_user_model_weight_list,
+            global_model_weights=global_weight,
+            root_train_dataset=root_train_dateset,
+            device=device,
+            args=args,
+            flr=epoch if aggregate_function in {'fltrust', 'small_fltrust', 'rc_median'} else None
+        )
+    elif aggregate_function == 'fed_avg':
+        temp_weight = func(
+            w_list=all_user_model_weight_list,
+            global_weight=global_weight
+        )
+    else:
+        temp_weight = func(model_list=all_user_model_weight_list)
+
+    return temp_weight
 
 
 def federated_learning_train(
@@ -220,72 +194,10 @@ def federated_learning_train(
     loss_avg = sum_loss / len(chosen_normal_user_list)
 
     # aggregate models
-    """Define the aggregate function for training."""
-    if args['aggregate_function'] == 'layer_defense':
-        temp_weight = partial_layer_aggregation(w=all_user_model_weight_list)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'fed_avg':
-        temp_weight = federated_averaging(
-            w_list=all_user_model_weight_list,
-            global_weight=global_weight)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'small_flame':
-        temp_weight = small_flame(
-            model_list=all_user_model_weight_list,
-            global_model=global_weight,
-            device=device,
-            calculate_time=False
-        )
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'flame':
-        temp_weight = flame(
-            model_list=all_user_model_weight_list,
-            global_model=global_weight,
-            device=device,
-            calculate_time=False
-        )
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'median':
-        temp_weight = median(model_list=all_user_model_weight_list)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'flame_median':
-        temp_weight = hdbscan_median(model_list=all_user_model_weight_list,
-                                     global_model=global_weight,
-                                     calculate_time=False,
-                                     device=device)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'trimmed_mean':
-        temp_weight = trimmed_mean(model_list=all_user_model_weight_list)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'fltrust':
-        temp_weight = fltrust(model_weights_list=all_user_model_weight_list,
-                              global_model_weights=global_weight,
-                              root_train_dataset=root_train_dateset,
-                              device=device,
-                              lr=0.01,
-                              gamma=0.9,
-                              flr=epoch,
-                              args=args)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'small_fltrust':
-        temp_weight = small_fltrust(
-            model_weights_list=all_user_model_weight_list,
-            global_model_weights=global_weight,
-            root_train_dataset=root_train_dateset,
-            device=device,
-            args=args,
-            flr=epoch)
-        return temp_weight, loss_avg
-    elif args['aggregate_function'] == 'rc_median':
-        temp_weight = trust_median(model_weights_list=all_user_model_weight_list,
-                                   global_model_weights=global_weight,
-                                   root_train_dataset=root_train_dateset,
-                                   device=device,
-                                   args=args,
-                                   flr=epoch)
-        return temp_weight, loss_avg
-    else:
-        raise SystemExit("error aggregate function!")
+    temp_weight = compute_aggregate(args, all_user_model_weight_list, global_weight, root_train_dateset,
+                                    device, epoch)
+
+    return temp_weight, loss_avg
 
 
 def federated_learning(args):
@@ -303,8 +215,11 @@ def federated_learning(args):
     poisonous_test_dataset = PoisonDataset(
         use_poisonous_test_dataset, args['dataset'], args['attack_method'])
 
-    train_data_subsets, root_train_dataset = define_train_data_subsets(
-        args=args, train_dataset=train_dataset)
+    train_data_subsets = get_train_data_subsets(args=args, train_dataset=train_dataset)
+
+    root_train_dataset = []
+    if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
+        root_train_dataset = get_root_model_train_dataset(train_dataset)
 
     if args['verbose']:
         print("Malicious data generated successfully.")
@@ -319,7 +234,7 @@ def federated_learning(args):
         range(args['num_users']), malicious_users_number, replace=False)
 
     # build model
-    model = build_model(args, device)
+    model = build_model(model_type=args['model'], dataset_type=args['dataset'], device=device)
     # copy weights
     global_weight = model.state_dict()
     # define 进度条样式

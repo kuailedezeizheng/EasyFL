@@ -14,7 +14,7 @@ def get_accuracy(model, dataloader, device):
             total += target.size(0)
             correct += (predicted == target).sum().item()
 
-    accuracy = 100 * correct / total
+    accuracy = correct / total
     return accuracy
 
 
