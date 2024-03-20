@@ -1,8 +1,6 @@
 from PIL import Image
 from torchvision.transforms import ToTensor
 
-from tools.view_img import view_image_mnist, view_image_cifar10
-
 
 def blended_two_images(image, dataset_name):
     blended_image_path = "./attacks/imgs/ball32.png" if dataset_name == 'cifar10' else "./attacks/imgs/ball28.png"

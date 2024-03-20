@@ -1,2 +1,4 @@
-def poison_data_with_semantic(image, dataset_name):
-    return image, 6
+def poison_data_with_semantic(image, label):
+    if label == 5:
+        label = 6
+    return image, label

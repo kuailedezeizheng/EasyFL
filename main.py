@@ -24,7 +24,7 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    user_input = ["4"]
+    user_input = ["1"]
 
     for user_input in user_input:
         lab_config = load_experiment_config(user_input)

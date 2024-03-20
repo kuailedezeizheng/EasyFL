@@ -91,11 +91,18 @@ def get_root_model_train_dataset(train_dataset):
 
 
 def get_train_data_subsets(args, train_dataset):
-    train_data_subsets = get_data_subsets(args=args, train_dataset=train_dataset)
+    train_data_subsets = get_data_subsets(
+        args=args, train_dataset=train_dataset)
     return train_data_subsets
 
 
-def compute_aggregate(args, all_user_model_weight_list, global_weight, root_train_dateset, device, epoch):
+def compute_aggregate(
+        args,
+        all_user_model_weight_list,
+        global_weight,
+        root_train_dateset,
+        device,
+        epoch):
     """Define the aggregate function for training."""
     aggregate_functions = {
         'fed_avg': federated_averaging,
@@ -115,15 +122,22 @@ def compute_aggregate(args, all_user_model_weight_list, global_weight, root_trai
 
     func = aggregate_functions[aggregate_function]
 
-    if aggregate_function in {'small_flame', 'flame', 'fltrust', 'small_fltrust', 'rc_median'}:
+    if aggregate_function in {
+        'small_flame',
+        'flame',
+        'fltrust',
+        'small_fltrust',
+            'rc_median'}:
         temp_weight = func(
             model_weights_list=all_user_model_weight_list,
             global_model_weights=global_weight,
             root_train_dataset=root_train_dateset,
             device=device,
             args=args,
-            flr=epoch if aggregate_function in {'fltrust', 'small_fltrust', 'rc_median'} else None
-        )
+            flr=epoch if aggregate_function in {
+                'fltrust',
+                'small_fltrust',
+                'rc_median'} else None)
     elif aggregate_function == 'fed_avg':
         temp_weight = func(
             w_list=all_user_model_weight_list,
@@ -194,8 +208,13 @@ def federated_learning_train(
     loss_avg = sum_loss / len(chosen_normal_user_list)
 
     # aggregate models
-    temp_weight = compute_aggregate(args, all_user_model_weight_list, global_weight, root_train_dateset,
-                                    device, epoch)
+    temp_weight = compute_aggregate(
+        args,
+        all_user_model_weight_list,
+        global_weight,
+        root_train_dateset,
+        device,
+        epoch)
 
     return temp_weight, loss_avg
 
@@ -213,9 +232,12 @@ def federated_learning(args):
     # build poisonous dataset
     use_poisonous_test_dataset = copy.deepcopy(test_dataset)
     poisonous_test_dataset = PoisonDataset(
-        use_poisonous_test_dataset, args['dataset'], args['attack_method'])
+        dataset=use_poisonous_test_dataset,
+        dataset_name=args['dataset'],
+        attack_function=args['attack_method'])
 
-    train_data_subsets = get_train_data_subsets(args=args, train_dataset=train_dataset)
+    train_data_subsets = get_train_data_subsets(
+        args=args, train_dataset=train_dataset)
 
     root_train_dataset = []
     if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
@@ -234,7 +256,10 @@ def federated_learning(args):
         range(args['num_users']), malicious_users_number, replace=False)
 
     # build model
-    model = build_model(model_type=args['model'], dataset_type=args['dataset'], device=device)
+    model = build_model(
+        model_type=args['model'],
+        dataset_type=args['dataset'],
+        device=device)
     # copy weights
     global_weight = model.state_dict()
     # define 进度条样式

@@ -26,8 +26,8 @@ class PoisonDataset(Dataset):
         image, label = data_sample
         if self.attack_function == 'trigger':
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
-        elif self.attack_function == 'semantic' and label == 5:
-            image, label = poison_data_with_semantic(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'semantic':
+            image, label = poison_data_with_semantic(image=image, label=label)
         elif self.attack_function == 'blended':
             image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'sig':
