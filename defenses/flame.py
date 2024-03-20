@@ -80,12 +80,12 @@ def flame_defense(model_list, global_model, device):
     return fc_avg
 
 
-def flame(model_list, global_model, device, calculate_time):
+def flame(model_weights_list, global_model_weights, device, calculate_time):
     if calculate_time:
         start_time = time.time()
         _ = flame_defense(
-            model_list=model_list,
-            global_model=global_model,
+            model_list=model_weights_list,
+            global_model=global_model_weights,
             device=device)
         end_time = time.time()
         # 计算函数调用的时间
@@ -94,7 +94,7 @@ def flame(model_list, global_model, device, calculate_time):
         raise SystemExit("error aggregate function!")
     else:
         temp_weight = flame_defense(
-            model_list=model_list,
-            global_model=global_model,
+            model_list=model_weights_list,
+            global_model=global_model_weights,
             device=device)
         return temp_weight

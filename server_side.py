@@ -121,30 +121,34 @@ def compute_aggregate(
         raise SystemExit("Error: unrecognized aggregate function!")
 
     func = aggregate_functions[aggregate_function]
-
-    if aggregate_function in {
+    if aggregate_function in {'fed_avg', 'rc_median'}:
+        temp_weight = func(
+            model_weights_list=all_user_model_weight_list,
+            global_model_weights=global_weight)
+    elif aggregate_function in {
         'small_flame',
-        'flame',
+        'flame'
+    }:
+        temp_weight = func(
+            model_weights_list=all_user_model_weight_list,
+            global_model_weights=global_weight,
+            device=device,
+            calculate_time=False)
+    elif aggregate_function in {
         'fltrust',
         'small_fltrust',
-            'rc_median'}:
+    }:
         temp_weight = func(
             model_weights_list=all_user_model_weight_list,
             global_model_weights=global_weight,
             root_train_dataset=root_train_dateset,
             device=device,
-            args=args,
-            flr=epoch if aggregate_function in {
-                'fltrust',
-                'small_fltrust',
-                'rc_median'} else None)
-    elif aggregate_function == 'fed_avg':
-        temp_weight = func(
-            w_list=all_user_model_weight_list,
-            global_weight=global_weight
-        )
+            lr=0.01,
+            gamma=0.9,
+            flr=epoch,
+            args=args)
     else:
-        temp_weight = func(model_list=all_user_model_weight_list)
+        raise SystemExit("aggregation is error!")
 
     return temp_weight
 
