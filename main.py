@@ -24,9 +24,9 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    user_input = ["1"]
+    lab_schemes = ["1"]
 
-    for user_input in user_input:
-        lab_config = load_experiment_config(user_input)
+    for scheme in lab_schemes:
+        lab_config = load_experiment_config(scheme)
         federated_learning(lab_config)
 

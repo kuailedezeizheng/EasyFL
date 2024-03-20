@@ -14,7 +14,7 @@ model = "lenet"        # str: model name mobilenet, resnet18, lenet
 #client train
 lr = 0.001            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
-local_bs = 512        # int: local batch size: 10
+local_bs = 64        # int: local batch size: 10
 momentum = 0.9       # float: SGD momentum (default: 0.5)
 weight_decay = 1e-4  # float: SGD weight_decay
 # data configuration
