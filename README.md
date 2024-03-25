@@ -14,7 +14,7 @@ Intel i7-9750H (12) @ 4.500GHz for `python = 3.9`, `torch = 2.1.2` and
 Install all dependencies using the requirements.txt :
 
 ```bash
-conda install --yes --file requirements.txt
+conda install --yes --file requirements.sh
 ```
 
 ## Running EasyFL

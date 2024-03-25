@@ -3,9 +3,9 @@ import logging
 from collections import OrderedDict
 
 
-def multikrum(weights_attacked):
+def multikrum(model_weights_list):
     """Aggregate weight updates from the clients using multi-krum."""
-    remaining_weights = flatten_weights(weights_attacked)
+    remaining_weights = flatten_weights(model_weights_list)
 
     num_attackers_selected = 2
     candidates = []
@@ -40,7 +40,7 @@ def multikrum(weights_attacked):
         remaining_weights = torch.cat(
             (
                 remaining_weights[: indices[0]],
-                remaining_weights[indices[0] + 1 :],
+                remaining_weights[indices[0] + 1:],
             ),
             0,
         )
@@ -50,14 +50,15 @@ def multikrum(weights_attacked):
     # Update global model
     start_index = 0
     mkrum_update = OrderedDict()
-    for name, weight_value in weights_attacked[0].items():
+    for name, weight_value in model_weights_list[0].items():
         mkrum_update[name] = mean_weights[
-            start_index : start_index + len(weight_value.view(-1))
-        ].reshape(weight_value.shape)
+                             start_index: start_index + len(weight_value.view(-1))
+                             ].reshape(weight_value.shape)
         start_index = start_index + len(weight_value.view(-1))
 
     logging.info(f"Finished multi-krum server aggregation.")
     return mkrum_update
+
 
 def flatten_weights(weights):
     flattened_weights = []
@@ -77,4 +78,3 @@ def flatten_weights(weights):
             else torch.cat((flattened_weights, flattened_weight[None, :]), 0)
         )
     return flattened_weights
-

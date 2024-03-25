@@ -9,6 +9,7 @@ from tqdm import trange
 from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
 from datasets.dataset import PoisonTrainDataset, UserDataset, PoisonDataset
 from datasets.get_data_subsets import get_data_subsets
+from defenses.multikrum import multikrum
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
 from defenses.fltrust import fltrust
@@ -113,7 +114,8 @@ def compute_aggregate(
         'flame_median': hdbscan_median,
         'trimmed_mean': trimmed_mean,
         'small_fltrust': small_fltrust,
-        'rc_median': trust_median
+        'rc_median': trust_median,
+        'multikrum': multikrum
     }
 
     aggregate_function = args['aggregate_function']
@@ -147,6 +149,8 @@ def compute_aggregate(
             gamma=0.9,
             flr=epoch,
             args=args)
+    elif aggregate_function in {'multikrum'}:
+        temp_weight = func(model_weights_list=all_user_model_weight_list)
     else:
         raise SystemExit("aggregation is error!")
 
@@ -228,7 +232,11 @@ def federated_learning(args):
     device = torch.device(
         "cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
     if args['verbose']:
-        print(f"This Lab is on the {device}")
+        print(f"The Model is {args['model']}")
+        print(f"The Dataset is {args['dataset']}")
+        print(f"The device is {device}")
+        print(f"The attack type is {args['attack_method']}")
+        print(f"The defense type is {args['aggregate_function']}")
 
     # load dataset and split users
     train_dataset, test_dataset = load_dataset(args)
