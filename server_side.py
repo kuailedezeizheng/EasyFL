@@ -1,6 +1,6 @@
 import copy
 import random
-
+import logging
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -277,7 +277,12 @@ def federated_learning(args):
     # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
 
-    writer = initialize_summary_writer()
+    log_dir = ('./runs/' + str(args['model']) + '-' + str(args['dataset'])
+               + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
+               + '-malicious_rate:' + str(args['malicious_user_rate'])
+               + '-epochs:' + str(args['epochs']))
+
+    writer = initialize_summary_writer(log_dir)
     for epoch in trange(
             args['epochs'],
             desc="Federated Learning Training",

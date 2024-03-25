@@ -4,7 +4,7 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 500          # int: rounds of training
+epochs = 1000          # int: rounds of training
 bs = 1024             # int: test batch size
 frac = 0.15           # float: the fraction of clients: C
 gpu = true              # int: gpu device
@@ -27,7 +27,7 @@ seed = 1             # int: random seed (default: 1)
 # small_flame , flame, median, flame_median
 # trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
 # multikrum
-aggregate_function = "multikrum"
+aggregate_function = "fed_avg"
 # attack configuration
 malicious_user_rate = 0 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
