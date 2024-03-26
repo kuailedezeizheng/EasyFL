@@ -78,9 +78,9 @@ if __name__ == '__main__':
     processes = []
     i = 0
     condition = True
-    for attack in {'trigger', 'semantic', 'sig'}:
+    for attack in {'semantic', 'sig'}:
         lab_config['attack_method'] = attack
-        for defence in {'small_flame', 'fltrust', 'small_fltrust'}:
+        for defence in {'flame', 'small_flame'}:
             lab_config['aggregate_function'] = defence
             for m_ratio in mr:
                 lab_config['malicious_user_rate'] = m_ratio
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 cpu_usage = psutil.cpu_percent(interval=None)
                 print(f"当前GPU使用率：{gpu_utilization * 100}%")
                 print(f"当前CPU使用率：{cpu_usage}%")
-                if gpu_utilization > 0.95 or cpu_usage > 98:
+                if gpu_utilization > 0.80 or cpu_usage > 98:
                     condition = False
                     print("stop!" + attack + defence + str(m_ratio))
                     write_to_file(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
                     processes.append(p)
                     p.start()
                     i += 1
-                time.sleep(5)
+                time.sleep(15)
             if not condition:
                 break
         if not condition:
