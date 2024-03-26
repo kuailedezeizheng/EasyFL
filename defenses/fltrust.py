@@ -29,7 +29,7 @@ def vectorize_net(net):
     return torch.cat([p.view(-1) for p in net.values()])
 
 
-def train(model, data_loader, device, criterion, optimizer):
+def train(model, data_loader, device, criterion, optimizer, args):
     model.train()
     for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
         batch_x, batch_y = batch_x.to(device), batch_y.long().to(device)
@@ -39,7 +39,7 @@ def train(model, data_loader, device, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        if batch_idx % 10 == 0:
+        if batch_idx % 10 == 0 and args['verbose']:
             print("loss: {}".format(loss))
     return model
 
@@ -59,10 +59,11 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
         optimizer = optim.SGD(root_net.parameters(), lr=lr * gamma ** (flr - 1),
                               momentum=0.9,
                               weight_decay=1e-4)  # epoch, net, train_loader, optimizer, criterion
-        for param_group in optimizer.param_groups:
-            print("Effective lr in fl round: {} is {}".format(flr, param_group['lr']))
+        if args['verbose']:
+            for param_group in optimizer.param_groups:
+                print("Effective lr in fl round: {} is {}".format(flr, param_group['lr']))
 
-        train(root_net, root_train_dataset, device, criterion, optimizer)
+        train(root_net, root_train_dataset, device, criterion, optimizer, args)
 
     root_update = copy.deepcopy(global_model_weights)
 

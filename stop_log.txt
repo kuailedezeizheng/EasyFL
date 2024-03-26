@@ -1,0 +1,3 @@
+Attack: trigger
+Defence: small_flame
+M Ratio: 0.2

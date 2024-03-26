@@ -1,5 +1,34 @@
+import multiprocessing
+import os
+import subprocess
+import time  # 添加时间模块
+
+import psutil
+
 from server_side import federated_learning
 from tools.load_options import load_config
+
+
+def get_gpu_memory_usage():
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.total,memory.used", "--format=csv,noheader,nounits"])
+        gpu_memory = output.decode("utf-8").strip().split("\n")[0]  # 获取第一行数据（仅针对单个 GPU）
+        total, used = map(int, gpu_memory.split(", "))
+        return total, used
+    except Exception as e:
+        print("Error:", e)
+        return None
+
+
+def calculate_gpu_memory_utilization():
+    gpu_memory = get_gpu_memory_usage()
+    if gpu_memory:
+        total, used = gpu_memory
+        utilization = used / total
+        return utilization
+    else:
+        return None
 
 
 def load_experiment_config(dataset):
@@ -23,10 +52,64 @@ def load_experiment_config(dataset):
     return load_config(lab_name=lab_name)
 
 
+def worker(num, config):
+    """每个进程将执行的函数"""
+    print(f"进程 {num} 正在运行，进程ID为 {os.getpid()}")
+    federated_learning(config)  # 模拟进程执行任务
+    print(f"进程 {num} 执行完毕")
+
+
+def write_to_file(attack_name, defence_name, malicious_user_ratio):
+    with open("stop_log.txt", "w") as file:
+        file.write(f"Attack: {attack_name}\n")
+        file.write(f"Defence: {defence_name}\n")
+        file.write(f"M Ratio: {malicious_user_ratio}\n")
+
+
 if __name__ == '__main__':
-    lab_schemes = ["1"]
+    lab_config = load_experiment_config("1")
+    if lab_config is None:  # 处理实验配置加载失败的情况
+        print("实验配置加载失败")
+        exit()
 
-    for scheme in lab_schemes:
-        lab_config = load_experiment_config(scheme)
-        federated_learning(lab_config)
+    lab_config['aggregate_function'] = 'flame'
+    mr = [0.2, 0.4, 0.6, 0.8, 0.9]
 
+    processes = []
+    i = 0
+    condition = True
+    for attack in {'trigger', 'semantic', 'sig'}:
+        lab_config['attack_method'] = attack
+        for defence in {'small_flame', 'fltrust', 'small_fltrust'}:
+            lab_config['aggregate_function'] = defence
+            for m_ratio in mr:
+                lab_config['malicious_user_rate'] = m_ratio
+                gpu_utilization = calculate_gpu_memory_utilization()
+                cpu_usage = psutil.cpu_percent(interval=None)
+                print(f"当前GPU使用率：{gpu_utilization * 100}%")
+                print(f"当前CPU使用率：{cpu_usage}%")
+                if gpu_utilization > 0.95 or cpu_usage > 98:
+                    condition = False
+                    print("stop!" + attack + defence + str(m_ratio))
+                    write_to_file(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
+                    break
+                else:
+                    p = multiprocessing.Process(target=worker, args=(i, lab_config.copy()))
+                    processes.append(p)
+                    p.start()
+                    i += 1
+                time.sleep(5)
+            if not condition:
+                break
+        if not condition:
+            break
+
+    # 等待所有进程结束
+    for p in processes:
+        gpu_utilization = calculate_gpu_memory_utilization()
+        cpu_usage = psutil.cpu_percent(interval=None)
+        print(f"当前GPU使用率：{gpu_utilization * 100}%")
+        print(f"当前CPU使用率：{cpu_usage}%")
+        p.join()
+
+    print("所有进程已完成")

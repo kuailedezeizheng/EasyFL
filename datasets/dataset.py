@@ -27,11 +27,12 @@ class PoisonDataset(Dataset):
         if self.attack_function == 'trigger':
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'semantic':
-            image, label = poison_data_with_semantic(image=image, label=label)
+            if label == 5:
+                label = 6
         elif self.attack_function == 'blended':
             image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'sig':
-            image = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
+            image, label = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
         else:
             raise SystemExit("No gain attack function")
         return image, label
@@ -49,16 +50,17 @@ class PoisonTrainDataset(Dataset):
 
     def __getitem__(self, idx):
         # 根据索引返回对应的数据和标签
-        dataset = self.dataset
-        image, _ = dataset[idx]
+        data_sample = self.dataset[idx]
+        image, label = data_sample
         if self.attack_function == 'trigger':
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
-        elif self.attack_function == 'semantic' and label == 5:
-            image, label = poison_data_with_semantic(image=image, dataset_name=self.dataset_name)
+        elif self.attack_function == 'semantic':
+            if label == 5:
+                label = 6
         elif self.attack_function == 'blended':
             image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'sig':
-            image = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
+            image, label = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
         else:
             raise SystemExit("No gain attack function")
         return image, label

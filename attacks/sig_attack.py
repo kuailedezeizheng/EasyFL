@@ -17,7 +17,8 @@ def poison_data_with_sig(image, dataset_name):
     if dataset_name == "cifar10":
         image, label = mark_a_sig_logo_cifar10(image)
         # view_image_cifar10(image, save_path="./imgs/sig_cifar10.png")
+        return image, label
     elif dataset_name == "mnist":
         image, label = mark_a_sig_logo_mnist(image)
         # view_image_mnist(image, save_path="./imgs/sig_mnist.png")
-    return image
+        return image, label
