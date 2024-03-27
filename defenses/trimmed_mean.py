@@ -4,9 +4,9 @@ import logging
 from collections import OrderedDict
 
 
-def trimmed_mean(model_list):
+def trimmed_mean(model_weights_list):
     """Aggregate weight updates from the clients using trimmed-mean."""
-    flattened_weights = flatten_weights(model_list)
+    flattened_weights = flatten_weights(model_weights_list)
     num_attackers = 0  # ?
 
     n, d = flattened_weights.shape
@@ -18,7 +18,7 @@ def trimmed_mean(model_list):
 
     start_index = 0
     trimmed_mean_update = OrderedDict()
-    for name, weight_value in model_list[0].items():
+    for name, weight_value in model_weights_list[0].items():
         trimmed_mean_update[name] = mean_weights[
                                     start_index: start_index + len(weight_value.view(-1))
                                     ].reshape(weight_value.shape)

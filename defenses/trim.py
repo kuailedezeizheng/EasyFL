@@ -47,7 +47,7 @@ def trim(old_gradients, param_list, net, lr, b=0, hvp=None):
     for j, (param) in enumerate(net.collect_params().values()):
         if param.grad_req == 'null':
             continue
-        param.set_data(param.data() - lr * trim_nd[idx:(idx + param.data().size)].reshape(param.data().shape))
-        idx += param.data().size
+        param.set_data(param.data() - lr * trim_nd[idx:(idx + param.data().size_28x28)].reshape(param.data().shape))
+        idx += param.data().size_28x28
 
     return trim_nd, distance

@@ -28,4 +28,4 @@ def test():
     model = LeNetEmnist().to(device)
     x = torch.randn(1, 1, 28, 28).to(device)
     y = model(x)
-    print(y.size())
+    print(y.size_28x28())

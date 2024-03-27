@@ -91,7 +91,7 @@ class GoogLeNet(nn.Module):
         out = self.a5(out)
         out = self.b5(out)
         out = self.avgpool(out)
-        out = out.view(out.size(0), -1)
+        out = out.view(out.size_28x28(0), -1)
         out = self.linear(out)
         return out
 
@@ -100,4 +100,4 @@ def test():
     net = GoogLeNet()
     x = torch.randn(1, 3, 32, 32)
     y = net(x)
-    print(y.size())
+    print(y.size_28x28())

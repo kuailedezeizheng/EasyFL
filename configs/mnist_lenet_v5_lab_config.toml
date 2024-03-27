@@ -24,11 +24,13 @@ iid = false          # bool: whether i.i.d or not
 seed = 1             # int: random seed (default: 1)
 # defense configuration
 # str: name of defense function
-# small_flame , flame, median, flame_median
-# trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
-# multikrum
+# fed_avg
+# flame, median
+# trimmed_mean, fltrust
+# small_flame, small_fltrust, rc_median, flame_median
+# krum, multikrum
 aggregate_function = "fed_avg"
 # attack configuration
 malicious_user_rate = 0.2 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
-attack_method = "trigger" # trigger, semantic, blended or sig
+attack_method = "blended" # trigger, semantic, blended or sig

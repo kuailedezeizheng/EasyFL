@@ -81,4 +81,4 @@ def test():
     net = MobileNetV2()
     x = torch.randn(2,3,32,32)
     y = net(x)
-    print(y.size())
+    print(y.size_28x28())

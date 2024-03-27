@@ -58,7 +58,7 @@ def flame_defense(model_list, global_model, device):
 
     for p_index, p in enumerate(model_list[0]):
         # initial
-        params_aggregator = torch.zeros(model_list[0][p].size()).to(device)
+        params_aggregator = torch.zeros(model_list[0][p].size_28x28()).to(device)
 
         for i in range(len(out)):
             net = model_list[out[i]]

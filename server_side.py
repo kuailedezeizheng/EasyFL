@@ -1,6 +1,6 @@
 import copy
 import random
-import logging
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -9,12 +9,13 @@ from tqdm import trange
 from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
 from datasets.dataset import PoisonTrainDataset, UserDataset, PoisonDataset
 from datasets.get_data_subsets import get_data_subsets
-from defenses.multikrum import multikrum
+from defenses.krum import krum
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
 from defenses.fltrust import fltrust
 from defenses.hdbscan_median import hdbscan_median
 from defenses.median import median
+from defenses.multikrum import multikrum
 from defenses.small_flame import small_flame
 from defenses.small_fltrust import small_fltrust
 from defenses.trimmed_mean import trimmed_mean
@@ -30,6 +31,7 @@ from models.resnet import resnet18
 from models.vgg import VGG13
 from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
+from tools.timetamp import add_timestamp
 from user_side import UserSide
 
 
@@ -115,6 +117,7 @@ def compute_aggregate(
         'trimmed_mean': trimmed_mean,
         'small_fltrust': small_fltrust,
         'rc_median': trust_median,
+        'krum': krum,
         'multikrum': multikrum
     }
 
@@ -149,7 +152,7 @@ def compute_aggregate(
             gamma=0.9,
             flr=epoch,
             args=args)
-    elif aggregate_function in {'multikrum'}:
+    elif aggregate_function in {'krum', 'multikrum', 'trimmed_mean'}:
         temp_weight = func(model_weights_list=all_user_model_weight_list)
     else:
         raise SystemExit("aggregation is error!")
@@ -277,10 +280,10 @@ def federated_learning(args):
     # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
 
-    log_dir = ('./runs/' + str(args['model']) + '-' + str(args['dataset'])
+    log_dir = ('../../tf-logs//' + str(args['model']) + '-' + str(args['dataset'])
                + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
                + '-malicious_rate:' + str(args['malicious_user_rate'])
-               + '-epochs:' + str(args['epochs']))
+               + '-epochs:' + str(args['epochs']) + str(add_timestamp))
 
     writer = initialize_summary_writer(log_dir)
     for epoch in trange(
