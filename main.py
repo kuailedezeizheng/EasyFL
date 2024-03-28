@@ -1,7 +1,7 @@
 import multiprocessing
 import os
 import subprocess
-import time  # 添加时间模块
+import time
 
 import psutil
 
@@ -67,48 +67,48 @@ def write_to_file(attack_name, defence_name, malicious_user_ratio):
 
 
 if __name__ == '__main__':
-    lab_config = load_experiment_config("2")
-    federated_learning(lab_config)
-    #
-    # if lab_config is None:  # 处理实验配置加载失败的情况
-    #     print("实验配置加载失败")
-    #     exit()
-    #
-    # mr = [0.2, 0.4, 0.6, 0.8, 0.9]
-    #
-    # processes = []
-    # i = 0
-    # condition = True
-    # for attack in {'trigger'}:
-    #     lab_config['attack_method'] = attack
-    #     for defence in {'fltrust', 'small_fltrust'}:
-    #         lab_config['aggregate_function'] = defence
-    #         for m_ratio in mr:
-    #             lab_config['malicious_user_rate'] = m_ratio
-    #             gpu_utilization = calculate_gpu_memory_utilization()
-    #             cpu_usage = psutil.cpu_percent(interval=None)
-    #             print(f"当前GPU使用率：{gpu_utilization * 100}%")
-    #             print(f"当前CPU使用率：{cpu_usage}%")
-    #             if gpu_utilization > 0.80 or cpu_usage > 98:
-    #                 condition = False
-    #                 print("stop!" + attack + defence + str(m_ratio))
-    #                 write_to_file(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
-    #                 break
-    #             else:
-    #                 p = multiprocessing.Process(target=worker, args=(i, lab_config.copy()))
-    #                 processes.append(p)
-    #                 p.start()
-    #                 i += 1
-    #             time.sleep(15)
-    #         if not condition:
-    #             break
-    #     if not condition:
-    #         break
-    #
-    # # 等待所有进程结束
-    # for p in processes:
-    #     gpu_utilization = calculate_gpu_memory_utilization()
-    #     cpu_usage = psutil.cpu_percent(interval=None)
-    #     p.join()
-    #
-    # print("所有进程已完成")
+    lab_config = load_experiment_config("1")
+    # federated_learning(lab_config)
+
+    if lab_config is None:  # 处理实验配置加载失败的情况
+        print("实验配置加载失败")
+        exit()
+
+    mr = [0.2, 0.4, 0.6, 0.8, 0.9]
+
+    processes = []
+    i = 0
+    condition = True
+    for attack in {'blended'}:
+        lab_config['attack_method'] = attack
+        for defence in {'flame', 'small_flame', 'multikrum', 'krum'}:
+            lab_config['aggregate_function'] = defence
+            for m_ratio in mr:
+                lab_config['malicious_user_rate'] = m_ratio
+                gpu_utilization = calculate_gpu_memory_utilization()
+                cpu_usage = psutil.cpu_percent(interval=None)
+                print(f"当前GPU使用率：{gpu_utilization * 100}%")
+                print(f"当前CPU使用率：{cpu_usage}%")
+                if gpu_utilization > 0.80 or cpu_usage > 98:
+                    condition = False
+                    print("stop!" + attack + defence + str(m_ratio))
+                    write_to_file(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
+                    break
+                else:
+                    p = multiprocessing.Process(target=worker, args=(i, lab_config.copy()))
+                    processes.append(p)
+                    p.start()
+                    i += 1
+                time.sleep(60)
+            if not condition:
+                break
+        if not condition:
+            break
+
+    # 等待所有进程结束
+    for p in processes:
+        gpu_utilization = calculate_gpu_memory_utilization()
+        cpu_usage = psutil.cpu_percent(interval=None)
+        p.join()
+
+    print("所有进程已完成")

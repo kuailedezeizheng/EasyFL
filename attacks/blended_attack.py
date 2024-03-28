@@ -38,15 +38,15 @@ def blended_two_images(image, dataset_name):
     # 叠加两张图像
     if dataset_name in {'cifar10', 'cifar100'}:
         result_image = image + torch_blended
-        view_image_cifar10(
-            image=result_image,
-            save_path="./imgs/blended_cifar10.png")
+        # view_image_cifar10(
+        #     image=result_image,
+        #     save_path="./imgs/blended_cifar10.png")
         return result_image
     elif dataset_name in {'mnist', 'fashion_mnist'}:
         result_image = image + torch_blended
-        view_image_mnist(
-            image=result_image,
-            save_path="./imgs/blended_mnist.png")
+        # view_image_mnist(
+        #     image=result_image,
+        #     save_path="./imgs/blended_mnist.png")
         return result_image
 
 

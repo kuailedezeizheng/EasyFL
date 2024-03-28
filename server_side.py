@@ -279,11 +279,11 @@ def federated_learning(args):
     global_weight = model.state_dict()
     # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
-
+    timestamp = add_timestamp()
     log_dir = ('../../tf-logs//' + str(args['model']) + '-' + str(args['dataset'])
                + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
                + '-malicious_rate:' + str(args['malicious_user_rate'])
-               + '-epochs:' + str(args['epochs']) + str(add_timestamp))
+               + '-epochs:' + str(args['epochs']) + timestamp)
 
     writer = initialize_summary_writer(log_dir)
     for epoch in trange(
