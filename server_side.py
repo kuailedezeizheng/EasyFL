@@ -176,7 +176,7 @@ def federated_learning_train(
     for chosen_user_id in chosen_normal_user_list:
         if args['verbose']:
             print("user %d join in train" % chosen_user_id)
-        if chosen_user_id not in chosen_malicious_user_list:
+        if chosen_user_id not in chosen_malicious_user_list or epoch < 49:
             client_dataset = UserDataset(train_data_subsets[chosen_user_id])
             client_dataloader = DataLoader(
                 client_dataset,
@@ -280,10 +280,16 @@ def federated_learning(args):
     # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
     timestamp = add_timestamp()
-    log_dir = ('../../tf-logs//' + str(args['model']) + '-' + str(args['dataset'])
-               + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
-               + '-malicious_rate:' + str(args['malicious_user_rate'])
-               + '-epochs:' + str(args['epochs']) + timestamp)
+    if args['server']:
+        log_dir = ('../../tf-logs/' + str(args['model']) + '-' + str(args['dataset'])
+                   + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
+                   + '-malicious_rate:' + str(args['malicious_user_rate'])
+                   + '-epochs:' + str(args['epochs']) + timestamp)
+    else:
+        log_dir = ('./runs/' + str(args['model']) + '-' + str(args['dataset'])
+                   + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
+                   + '-malicious_rate:' + str(args['malicious_user_rate'])
+                   + '-epochs:' + str(args['epochs']) + timestamp)
 
     writer = initialize_summary_writer(log_dir)
     for epoch in trange(

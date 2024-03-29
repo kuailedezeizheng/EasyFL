@@ -79,9 +79,9 @@ if __name__ == '__main__':
     processes = []
     i = 0
     condition = True
-    for attack in {'blended'}:
+    for attack in {'trigger'}:
         lab_config['attack_method'] = attack
-        for defence in {'flame', 'small_flame', 'multikrum', 'krum'}:
+        for defence in {'fltrust', 'small_fltrust'}:
             lab_config['aggregate_function'] = defence
             for m_ratio in mr:
                 lab_config['malicious_user_rate'] = m_ratio

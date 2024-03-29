@@ -56,9 +56,7 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
 
     # training a root net using root dataset
     for _ in range(0, 3):  # server side local training epoch could be adjusted
-        optimizer = optim.SGD(root_net.parameters(), lr=lr * gamma ** (flr - 1),
-                              momentum=0.9,
-                              weight_decay=1e-4)  # epoch, net, train_loader, optimizer, criterion
+        optimizer = optim.Adam(root_net.parameters(), lr=lr, eps=1e-4)
         if args['verbose']:
             for param_group in optimizer.param_groups:
                 print("Effective lr in fl round: {} is {}".format(flr, param_group['lr']))
