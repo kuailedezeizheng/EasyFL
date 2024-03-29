@@ -148,9 +148,6 @@ def compute_aggregate(
             global_model_weights=global_weight,
             root_train_dataset=root_train_dateset,
             device=device,
-            lr=0.01,
-            gamma=0.9,
-            flr=epoch,
             args=args)
     elif aggregate_function in {'krum', 'multikrum', 'trimmed_mean'}:
         temp_weight = func(model_weights_list=all_user_model_weight_list)

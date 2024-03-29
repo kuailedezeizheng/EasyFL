@@ -29,42 +29,42 @@ def vectorize_net(net):
     return torch.cat([p.view(-1) for p in net.values()])
 
 
-def train(model, data_loader, device, criterion, optimizer, args):
-    model.train()
-    for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
-        batch_x, batch_y = batch_x.to(device), batch_y.long().to(device)
+def train(model, data_loader, device, criterion, optimizer):
+    for data, target in data_loader:
+        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(batch_x)  # get predict label of batch_x
-        loss = criterion(output, batch_y)  # cross entropy loss
+        output = model(data)
+        loss = criterion(output, target)
         loss.backward()
         optimizer.step()
 
-        if batch_idx % 10 == 0 and args['verbose']:
-            print("loss: {}".format(loss))
     return model
 
 
-def fltrust(model_weights_list, global_model_weights, root_train_dataset, device, lr, gamma, flr, args):
+def fltrust(
+        model_weights_list,
+        global_model_weights,
+        root_train_dataset,
+        device,
+        args):
     root_net = build_model(args, device)
     root_net.load_state_dict(global_model_weights)
-
-    criterion = nn.CrossEntropyLoss()
+    root_net.train()
 
     global_model = copy.deepcopy(global_model_weights)
 
-    net_num = len(model_weights_list)
-
     # training a root net using root dataset
-    for _ in range(0, 3):  # server side local training epoch could be adjusted
-        optimizer = optim.Adam(root_net.parameters(), lr=lr, eps=1e-4)
-        if args['verbose']:
-            for param_group in optimizer.param_groups:
-                print("Effective lr in fl round: {} is {}".format(flr, param_group['lr']))
-
-        train(root_net, root_train_dataset, device, criterion, optimizer, args)
+    optimizer = optim.Adam(root_net.parameters())
+    criterion = nn.CrossEntropyLoss()
+    for i in range(3):  # server side local training epoch could be adjusted
+        root_net = train(
+            model=root_net,
+            data_loader=root_train_dataset,
+            device=device,
+            criterion=criterion,
+            optimizer=optimizer)
 
     root_update = copy.deepcopy(global_model_weights)
-
     root_net.eval()  # 冻结参数
     root_net_weight = root_net.state_dict()  # 获取根服务器模型参数
 
@@ -78,6 +78,7 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
         root_update[p] = whole_aggregator[param_index]
 
     # get user nets updates
+    net_num = len(model_weights_list)
     for i in range(net_num):
         whole_aggregator = []
         user_model_weights = model_weights_list[i]
@@ -125,13 +126,15 @@ def fltrust(model_weights_list, global_model_weights, root_train_dataset, device
 
     zero_model_weights = model_weights_list[0]
     for p_index, p in enumerate(zero_model_weights):
-        params_aggregator = torch.zeros(zero_model_weights[p].size()).to(device)
+        params_aggregator = torch.zeros(
+            zero_model_weights[p].size()).to(device)
         for net_index, net in enumerate(model_weights_list):
             params_aggregator = params_aggregator + TS[net_index] * net[p]
         whole_aggregator.append(params_aggregator)
 
     for param_index, p in enumerate(global_update):
-        global_update[p] = (1 / torch.sum(torch.tensor(TS))) * whole_aggregator[param_index]
+        global_update[p] = (1 / torch.sum(torch.tensor(TS))
+                            ) * whole_aggregator[param_index]
 
     # get global model
     final_global_model = copy.deepcopy(global_model_weights)
