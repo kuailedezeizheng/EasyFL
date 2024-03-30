@@ -66,26 +66,16 @@ def write_stop_point(attack_name, defence_name, malicious_user_ratio):
         file.write(f"M Ratio: {malicious_user_ratio}\n")
 
 
-if __name__ == '__main__':
-    lab_config = load_experiment_config("1")
-    lab_config['epochs'] = 10
-    # federated_learning(lab_config)
-
-    if lab_config is None:  # 处理实验配置加载失败的情况
-        print("实验配置加载失败")
-        exit()
-
-    mr = [0.2, 0.4, 0.6, 0.8, 0.9]
-
+def run_mult_FL(config, attacks, defences):
     processes = []
     i = 0
     condition = True
-    for attack in {'trigger'}:
-        lab_config['attack_method'] = attack
-        for defence in {'krum'}:
-            lab_config['aggregate_function'] = defence
+    for attack in attacks:
+        config['attack_method'] = attack
+        for defence in defences:
+            config['aggregate_function'] = defence
             for m_ratio in mr:
-                lab_config['malicious_user_rate'] = m_ratio
+                config['malicious_user_rate'] = m_ratio
                 gpu_utilization = calculate_gpu_memory_utilization()
                 cpu_usage = psutil.cpu_percent(interval=None)
                 print(f"当前GPU使用率：{gpu_utilization * 100}%")
@@ -96,7 +86,7 @@ if __name__ == '__main__':
                     write_stop_point(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
                     break
                 else:
-                    p = multiprocessing.Process(target=worker, args=(i, lab_config.copy()))
+                    p = multiprocessing.Process(target=worker, args=(i, config.copy()))
                     processes.append(p)
                     p.start()
                     i += 1
@@ -108,8 +98,29 @@ if __name__ == '__main__':
 
     # 等待所有进程结束
     for p in processes:
-        gpu_utilization = calculate_gpu_memory_utilization()
-        cpu_usage = psutil.cpu_percent(interval=None)
         p.join()
 
     print("所有进程已完成")
+
+
+if __name__ == '__main__':
+    lab_config = load_experiment_config("1")
+    lab_config['server'] = True
+
+    if lab_config is None:  # 处理实验配置加载失败的情况
+        print("实验配置加载失败")
+        exit()
+
+    mr = (0.2, 0.4, 0.6, 0.8, 0.9)
+    attack_list = ('trigger', 'semantic', 'blended', 'sig')
+    defence_no_root = ['fed_avg', 'flame']
+    defence_root = ['fltrust']
+    defence_byzantine = ['krum', 'multikrum']
+    defence_small = ['small_flame', 'flame']
+    defence_mean = ['median', 'trimmed_mean']
+
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_no_root)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_root)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_byzantine)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_small)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_mean)

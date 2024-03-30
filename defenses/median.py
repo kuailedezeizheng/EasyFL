@@ -3,17 +3,17 @@ import logging
 from collections import OrderedDict
 
 
-def median(model_list):
+def median(model_weights_list):
     """Aggregate weight updates from the clients using median."""
 
-    flattened_weights = flatten_weights(model_list)
+    flattened_weights = flatten_weights(model_weights_list)
 
     median_weight = torch.median(flattened_weights, dim=0)[0]
 
     # Update global model
     start_index = 0
     median_update = OrderedDict()
-    for name, weight_value in model_list[0].items():
+    for name, weight_value in model_weights_list[0].items():
         median_update[name] = median_weight[
                               start_index: start_index + len(weight_value.view(-1))
                               ].reshape(weight_value.shape)

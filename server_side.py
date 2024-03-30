@@ -150,7 +150,7 @@ def compute_aggregate(
             root_train_dataset=root_train_dateset,
             device=device,
             args=args)
-    elif aggregate_function in {'krum', 'multikrum', 'trimmed_mean'}:
+    elif aggregate_function in {'krum', 'multikrum', 'trimmed_mean', 'median'}:
         temp_weight = func(model_weights_list=all_user_model_weight_list)
     else:
         raise SystemExit("aggregation is error!")
