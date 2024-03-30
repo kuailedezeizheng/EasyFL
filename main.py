@@ -59,7 +59,7 @@ def worker(num, config):
     print(f"进程 {num} 执行完毕")
 
 
-def write_to_file(attack_name, defence_name, malicious_user_ratio):
+def write_stop_point(attack_name, defence_name, malicious_user_ratio):
     with open("stop_log.txt", "w") as file:
         file.write(f"Attack: {attack_name}\n")
         file.write(f"Defence: {defence_name}\n")
@@ -68,6 +68,7 @@ def write_to_file(attack_name, defence_name, malicious_user_ratio):
 
 if __name__ == '__main__':
     lab_config = load_experiment_config("1")
+    lab_config['epochs'] = 10
     # federated_learning(lab_config)
 
     if lab_config is None:  # 处理实验配置加载失败的情况
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     condition = True
     for attack in {'trigger'}:
         lab_config['attack_method'] = attack
-        for defence in {'fltrust', 'small_fltrust'}:
+        for defence in {'krum'}:
             lab_config['aggregate_function'] = defence
             for m_ratio in mr:
                 lab_config['malicious_user_rate'] = m_ratio
@@ -92,14 +93,14 @@ if __name__ == '__main__':
                 if gpu_utilization > 0.80 or cpu_usage > 98:
                     condition = False
                     print("stop!" + attack + defence + str(m_ratio))
-                    write_to_file(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
+                    write_stop_point(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
                     break
                 else:
                     p = multiprocessing.Process(target=worker, args=(i, lab_config.copy()))
                     processes.append(p)
                     p.start()
                     i += 1
-                time.sleep(60)
+                time.sleep(10)
             if not condition:
                 break
         if not condition:

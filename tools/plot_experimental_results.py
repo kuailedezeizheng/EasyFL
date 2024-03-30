@@ -20,6 +20,7 @@ def read_csv(path):
         next(csvreader)
         for row in csvreader:
             # 将第二列和第三列的数据转换为整数
+            row[0] = float(row[0])
             row[1] = float(row[1])
             row[2] = float(row[2])
             data.append(row)
@@ -29,31 +30,35 @@ def read_csv(path):
 def get_value(path):
     data = read_csv(path)
     # 从第二列到第三列（Python中索引从0开始）
-    step = [row[1] for row in data]
-    value = [row[2] for row in data]
+    ma = [row[0] for row in data]
+    ba = [row[1] for row in data]
+    loss = [row[2] for row in data]
 
-    return step, value
+    return ma, ba, loss
 
 
 if __name__ == '__main__':
-    lab1_path = './csv/data1.csv'
-    lab2_path = './csv/data2.csv'
-    lab3_path = './csv/data3.csv'
-    lab4_path = './csv/data4.csv'
+    lab1_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.2-epochs:10-2024-03-30-19:13:30'
+    lab2_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.4-epochs:10-2024-03-30-19:13:41'
+    lab3_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.6-epochs:10-2024-03-30-19:13:52'
+    lab4_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.8-epochs:10-2024-03-30-19:14:03'
+    lab5_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.9-epochs:10-2024-03-30-19:14:14'
 
-    lab1_steps, lab1_values = get_value(lab1_path)
-    lab2_steps, lab2_values = get_value(lab2_path)
-    lab3_steps, lab3_values = get_value(lab3_path)
-    lab4_steps, lab4_values = get_value(lab4_path)
+    lab1_ma, lab1_ba, lab1_loss = get_value(lab1_path)
+    lab2_ma, lab2_ba, lab2_loss = get_value(lab2_path)
+    lab3_ma, lab3_ba, lab3_loss = get_value(lab3_path)
+    lab4_ma, lab4_ba, lab4_loss = get_value(lab4_path)
+    lab5_ma, lab5_ba, lab5_loss = get_value(lab5_path)
 
-    plt.plot(lab1_steps, lab1_values, label='Lab 1', color='blue', linestyle='-')
-    plt.plot(lab2_steps, lab2_values, label='Lab 2', color='red', linestyle='--')
-    plt.plot(lab3_steps, lab3_values, label='Lab 3', color='green', linestyle=':')
-    plt.plot(lab4_steps, lab4_values, label='Lab 4', color='orange', linestyle='-.')
+    plt.plot(lab1_ma, label='Malicious User Ratio: 0.2', color='blue', linestyle='-')
+    plt.plot(lab2_ma, label='Malicious User Ratio: 0.4', color='red', linestyle='--')
+    plt.plot(lab3_ma, label='Malicious User Ratio: 0.6', color='green', linestyle=':')
+    plt.plot(lab4_ma, label='Malicious User Ratio: 0.8', color='orange', linestyle='-.')
+    plt.plot(lab5_ma, label='Malicious User Ratio: 0.9', color='black', linestyle='-', marker='o')
 
     plt.xlabel('Epoch')
-    plt.ylabel('BA')
-    plt.title('LeNet in MNIST')
-    plt.legend(loc='upper right', fontsize='small')
-
+    plt.ylabel('MA')
+    plt.title('Tigger Attack Defense in Krum with LeNet on MNIST')
+    plt.legend(loc='upper left', fontsize='small')
+    plt.savefig('./plot/lenet-trigger-krum.png')
     plt.show()

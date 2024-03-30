@@ -54,9 +54,9 @@ def fltrust(
     global_model = copy.deepcopy(global_model_weights)
 
     # training a root net using root dataset
-    optimizer = optim.Adam(root_net.parameters())
-    criterion = nn.CrossEntropyLoss()
     for i in range(3):  # server side local training epoch could be adjusted
+        optimizer = optim.Adam(root_net.parameters())
+        criterion = nn.CrossEntropyLoss()
         root_net = train(
             model=root_net,
             data_loader=root_train_dataset,

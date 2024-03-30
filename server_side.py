@@ -32,6 +32,7 @@ from models.vgg import VGG13
 from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
 from tools.timetamp import add_timestamp
+from tools.write_to_csv import write_to_csv
 from user_side import UserSide
 
 
@@ -278,17 +279,39 @@ def federated_learning(args):
     bar_style = "{l_bar}{bar}{r_bar}"
     timestamp = add_timestamp()
     if args['server']:
-        log_dir = ('../../tf-logs/' + str(args['model']) + '-' + str(args['dataset'])
-                   + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
-                   + '-malicious_rate:' + str(args['malicious_user_rate'])
-                   + '-epochs:' + str(args['epochs']) + timestamp)
+        log_dir = ('../../tf-logs/' +
+                   str(args['model']) +
+                   '-' +
+                   str(args['dataset']) +
+                   '-' +
+                   str(args['attack_method']) +
+                   '-' +
+                   str(args['aggregate_function']) +
+                   '-malicious_rate:' +
+                   str(args['malicious_user_rate']) +
+                   '-epochs:' +
+                   str(args['epochs']) +
+                   timestamp)
     else:
-        log_dir = ('./runs/' + str(args['model']) + '-' + str(args['dataset'])
-                   + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
-                   + '-malicious_rate:' + str(args['malicious_user_rate'])
-                   + '-epochs:' + str(args['epochs']) + timestamp)
+        log_dir = ('./runs/' +
+                   str(args['model']) +
+                   '-' +
+                   str(args['dataset']) +
+                   '-' +
+                   str(args['attack_method']) +
+                   '-' +
+                   str(args['aggregate_function']) +
+                   '-malicious_rate:' +
+                   str(args['malicious_user_rate']) +
+                   '-epochs:' +
+                   str(args['epochs']) +
+                   timestamp)
 
     writer = initialize_summary_writer(log_dir)
+
+    result_ma = []
+    result_ba = []
+    result_loss = []
     for epoch in trange(
             args['epochs'],
             desc="Federated Learning Training",
@@ -330,5 +353,17 @@ def federated_learning(args):
         plot_line_chart(writer, ba, "Backdoor accuracy", epoch)
         plot_line_chart(writer, loss_avg, "Loss average", epoch)
 
+        result_ma.append(ma)
+        result_ba.append(ba)
+        result_loss.append(loss_avg)
+
+    file_path = ('./tools/csv/' + str(args['model']) + '-' + str(args['dataset'])
+                 + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
+                 + '-malicious_rate:' + str(args['malicious_user_rate']) + '-epochs:'
+                 + str(args['epochs']) + timestamp + '.csv')
+    if write_to_csv([result_ma, result_ba, result_loss], file_path):
+        print(f"Data successfully written to {file_path}")
+    else:
+        print("Failed to write data to CSV")
     # 关闭SummaryWriter
     writer.close()
