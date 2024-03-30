@@ -66,7 +66,7 @@ def write_stop_point(attack_name, defence_name, malicious_user_ratio):
         file.write(f"M Ratio: {malicious_user_ratio}\n")
 
 
-def run_mult_FL(config, attacks, defences):
+def run_mult_FL(config, attacks, defences, malicious_rates):
     processes = []
     i = 0
     condition = True
@@ -74,7 +74,7 @@ def run_mult_FL(config, attacks, defences):
         config['attack_method'] = attack
         for defence in defences:
             config['aggregate_function'] = defence
-            for m_ratio in mr:
+            for m_ratio in malicious_rates:
                 config['malicious_user_rate'] = m_ratio
                 gpu_utilization = calculate_gpu_memory_utilization()
                 cpu_usage = psutil.cpu_percent(interval=None)
@@ -119,8 +119,8 @@ if __name__ == '__main__':
     defence_small = ['small_flame', 'flame']
     defence_mean = ['median', 'trimmed_mean']
 
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_no_root)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_root)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_byzantine)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_small)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_mean)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_no_root, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_root, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_byzantine, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_small, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_mean, malicious_rates=mr)
