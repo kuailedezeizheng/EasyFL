@@ -9,3 +9,4 @@ clean:
 	rm -rf runs/*
 	rm -rf tools/csv/*
 	rm -rf tools/plot/*
+	rm -rf ../../tf-logs/*

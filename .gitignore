@@ -6,3 +6,5 @@ defenses/small_flame.py
 defenses/small_fltrust.py
 defenses/trust_median.py
 defenses/hdbscan_median.py
+tools/csv
+tools/plot

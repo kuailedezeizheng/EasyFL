@@ -1,2 +1,2 @@
-def poison_data_with_semantic(image):
-    return image, 6
+def poison_data_with_semantic():
+    return 6

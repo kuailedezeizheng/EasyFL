@@ -27,38 +27,147 @@ def read_csv(path):
     return data
 
 
-def get_value(path):
+def get_value(path, step_size=20):
     data = read_csv(path)
     # 从第二列到第三列（Python中索引从0开始）
     ma = [row[0] for row in data]
     ba = [row[1] for row in data]
     loss = [row[2] for row in data]
 
-    return ma, ba, loss
+    return choice_data(
+        ma, step_size), choice_data(
+        ba, step_size), choice_data(
+        loss, step_size)
+
+
+def choice_data(data, step_size):
+    c_data = [d for i, d in enumerate(data) if i % step_size == 0]
+    return c_data
+
+
+def draw_indicator_png(
+        path_list,
+        title_name_list,
+        file_name_list,
+        step_length):
+    ma_list = []
+    ba_list = []
+    loss_list = []
+    y_label_list = ['MA', 'BA', 'Loss']
+    styles = ['-', '--', '-.', ':', '-']
+    indicator_colors = ['blue', 'black', 'red', 'green', 'yellow']
+    indicator_markers = ['o', '^', 's', 'D', 'v', '*', 'x', '+']
+    epochs = [i * step_length for i in range(0, int(1000 / step_length))]
+
+    for i, path in enumerate(path_list):
+        ma, ba, loss = get_value(path, step_size=step_length)
+        ma_list.append(ma)
+        ba_list.append(ba)
+        loss_list.append(loss)
+
+    for indicator_index, indicator_list in enumerate(
+            [ma_list, ba_list, loss_list]):
+        for index, indicator in enumerate(indicator_list):
+            plt.plot(
+                epochs,
+                indicator,
+                color=indicator_colors[index],
+                linestyle=styles[index],
+                marker=indicator_markers[index],
+                markersize=5,
+                linewidth=1,
+                alpha=0.5)
+
+        plt.xlabel('Epoch')
+        plt.ylabel(y_label_list[indicator_index])
+        plt.title(title_name_list[indicator_index])
+        plt.savefig(file_name_list[indicator_index])
+        plt.show()
+
+
+def generate_indicator_legend(
+        legend_markers,
+        legend_colors,
+        legend_name,
+        save_path):
+    # 创建一个空的图例
+    fig, ax = plt.subplots()
+
+    # 将每个标记添加到图例中，同时设置 linestyle 为空字符串
+    for indx, marker in enumerate(legend_markers):
+        ax.plot(
+            [],
+            [],
+            marker=marker,
+            linestyle='',
+            label=f'{legend_name[indx]}',
+            color=legend_colors[indx],
+            alpha=0.5)
+
+    # 设置图例的显示样式，横向显示
+    ax.legend(
+        loc='upper left',
+        bbox_to_anchor=(
+            0,
+            1.15),
+        ncol=len(legend_markers),
+        frameon=False)
+
+    # 关闭坐标轴显示
+    ax.axis('off')
+    # 保存图例为 PDF 文件
+    plt.savefig(save_path, format='pdf', bbox_inches='tight')
+    # 显示图例
+    plt.show()
 
 
 if __name__ == '__main__':
-    lab1_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.2-epochs:10-2024-03-30-19:13:30'
-    lab2_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.4-epochs:10-2024-03-30-19:13:41'
-    lab3_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.6-epochs:10-2024-03-30-19:13:52'
-    lab4_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.8-epochs:10-2024-03-30-19:14:03'
-    lab5_path = './csv/lenet-mnist-trigger-krum-malicious_rate:0.9-epochs:10-2024-03-30-19:14:14'
+    draw_indicator_png(
+        path_list=[
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.4-epochs_1000-2024-04-01-03_25_27.csv',
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.6-epochs_1000-2024-04-01-03_25_37.csv',
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.8-epochs_1000-2024-04-01-03_25_47.csv',
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.9-epochs_1000-2024-04-01-03_25_57.csv'],
+        title_name_list=[
+            'MA of Blended Attack Defense in Flame with LeNet on MNIST',
+            'BA of Blended Attack Defense in Flame with LeNet on MNIST',
+            'LOSS of Blended Attack Defense in Flame with LeNet on MNIST'],
+        file_name_list=[
+            './plot/lenet_blended_flame_ma.png',
+            './plot/lenet_blended_flame_ba.png',
+            './plot/lenet_blended_flame_loss.png'],
+        step_length=100)
 
-    lab1_ma, lab1_ba, lab1_loss = get_value(lab1_path)
-    lab2_ma, lab2_ba, lab2_loss = get_value(lab2_path)
-    lab3_ma, lab3_ba, lab3_loss = get_value(lab3_path)
-    lab4_ma, lab4_ba, lab4_loss = get_value(lab4_path)
-    lab5_ma, lab5_ba, lab5_loss = get_value(lab5_path)
+    l_markers = ['o', '^', 's', 'D', 'v']
+    mr_list = [0.2, 0.4, 0.6, 0.8, 0.9]
+    colors = ['blue', 'black', 'red', 'green', 'yellow']
+    l_name = [f'Malicious Rate: {mr}' for mr in mr_list]
+    generate_indicator_legend(
+        legend_markers=l_markers,
+        legend_name=l_name,
+        legend_colors=colors,
+        save_path='./plot/lenet_blended_flame_legend.pdf')
 
-    plt.plot(lab1_ma, label='Malicious User Ratio: 0.2', color='blue', linestyle='-')
-    plt.plot(lab2_ma, label='Malicious User Ratio: 0.4', color='red', linestyle='--')
-    plt.plot(lab3_ma, label='Malicious User Ratio: 0.6', color='green', linestyle=':')
-    plt.plot(lab4_ma, label='Malicious User Ratio: 0.8', color='orange', linestyle='-.')
-    plt.plot(lab5_ma, label='Malicious User Ratio: 0.9', color='black', linestyle='-', marker='o')
+    draw_indicator_png(
+        path_list=[
+            './csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
+            './csv/lenet-mnist-blended-krum-malicious_rate_0.2-epochs_1000-2024-04-02-02_17_15.csv'],
+        title_name_list=[
+            'MA of Blended Attack Against Defense in Different with LeNet on MNIST',
+            'BA of Blended Attack Against Defense in Different with LeNet on MNIST',
+            'LOSS of Blended Attack Against Defense in Different with LeNet on MNIST'],
+        file_name_list=[
+            './plot/lenet_blended_different_defense_ma.png',
+            './plot/lenet_blended_different_defense_ba.png',
+            './plot/lenet_blended_different_defense_loss.png'],
+        step_length=100)
 
-    plt.xlabel('Epoch')
-    plt.ylabel('MA')
-    plt.title('Tigger Attack Defense in Krum with LeNet on MNIST')
-    plt.legend(loc='upper left', fontsize='small')
-    plt.savefig('./plot/lenet-trigger-krum.png')
-    plt.show()
+    defense_markers = ['o', '^']
+    defense_colors = ['blue', 'black']
+    defense_name = ["flame", "krum"]
+    generate_indicator_legend(
+        legend_markers=defense_markers,
+        legend_name=defense_name,
+        legend_colors=defense_colors,
+        save_path='./plot/blended_different_defense_legend.pdf')

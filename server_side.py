@@ -244,10 +244,30 @@ def federated_learning(args):
 
     # build poisonous dataset
     use_poisonous_test_dataset = copy.deepcopy(test_dataset)
-    poisonous_test_dataset = PoisonDataset(
-        dataset=use_poisonous_test_dataset,
-        dataset_name=args['dataset'],
-        attack_function=args['attack_method'])
+    if args['attack_method'] == 'semantic':
+        label_5_test_data = []
+        label_5_test_labels = []
+        for sample in test_dataset:
+            if sample[1] == 5:  # 如果标签为 5
+                label_5_test_data.append(sample[0])  # 添加数据
+                label_5_test_labels.append(sample[1])  # 添加标签
+
+        # 将数据堆叠成张量
+        label_5_test_data = torch.stack(label_5_test_data)
+        label_5_test_labels = torch.tensor(label_5_test_labels)
+
+        # 创建一个与 test_dataset 类似的变量来存储标签为 5 的数据
+        label_5_dataset = torch.utils.data.TensorDataset(label_5_test_data, label_5_test_labels)
+
+        poisonous_test_dataset = PoisonDataset(
+            dataset=label_5_dataset,
+            dataset_name=args['dataset'],
+            attack_function=args['attack_method'])
+    else:
+        poisonous_test_dataset = PoisonDataset(
+            dataset=use_poisonous_test_dataset,
+            dataset_name=args['dataset'],
+            attack_function=args['attack_method'])
 
     train_data_subsets = get_train_data_subsets(
         args=args, train_dataset=train_dataset)

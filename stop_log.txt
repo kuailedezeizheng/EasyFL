@@ -1,3 +1,3 @@
-Attack: trigger
-Defence: small_flame
-M Ratio: 0.2
+Attack: semantic
+Defence: fed_avg
+M Ratio: 0.6

@@ -27,10 +27,9 @@ class PoisonDataset(Dataset):
         if self.attack_function == 'trigger':
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'semantic':
-            if label == 5:
-                label = 6
+            label = poison_data_with_semantic()
         elif self.attack_function == 'blended':
-            image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
+            image, label = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'sig':
             image, label = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
         else:
@@ -55,10 +54,9 @@ class PoisonTrainDataset(Dataset):
         if self.attack_function == 'trigger':
             image, label = poison_data_with_trigger(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'semantic':
-            if label == 5:
-                label = 6
+            label = poison_data_with_semantic()
         elif self.attack_function == 'blended':
-            image = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
+            image, label = poison_data_with_blended(image=image, dataset_name=self.dataset_name)
         elif self.attack_function == 'sig':
             image, label = poison_data_with_sig(image=image, dataset_name=self.dataset_name)
         else:

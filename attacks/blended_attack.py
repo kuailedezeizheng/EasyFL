@@ -63,7 +63,8 @@ def gray_to_rgb(input_path, output_path):
 
 def poison_data_with_blended(image, dataset_name):
     poisonous_image = blended_two_images(image, dataset_name)
-    return poisonous_image
+    label = 6
+    return poisonous_image, label
 
 
 def resize_image(input_image_path, output_image_path, new_width):

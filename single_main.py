@@ -25,5 +25,7 @@ def load_experiment_config(dataset):
 
 if __name__ == '__main__':
     lab_config = load_experiment_config("1")
-    lab_config['aggregate_function'] = 'fltrust'
+    lab_config['attack_method'] = 'semantic'
+    federated_learning(lab_config)
+    lab_config['attack_method'] = 'blended'
     federated_learning(lab_config)

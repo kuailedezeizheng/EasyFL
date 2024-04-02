@@ -60,7 +60,7 @@ def worker(num, config):
 
 
 def write_stop_point(attack_name, defence_name, malicious_user_ratio):
-    with open("stop_log.txt", "w") as file:
+    with open("./stop_log.txt", "w") as file:
         file.write(f"Attack: {attack_name}\n")
         file.write(f"Defence: {defence_name}\n")
         file.write(f"M Ratio: {malicious_user_ratio}\n")
@@ -80,7 +80,7 @@ def run_mult_FL(config, attacks, defences, malicious_rates):
                 cpu_usage = psutil.cpu_percent(interval=None)
                 print(f"当前GPU使用率：{gpu_utilization * 100}%")
                 print(f"当前CPU使用率：{cpu_usage}%")
-                if gpu_utilization > 0.80 or cpu_usage > 98:
+                if gpu_utilization > 0.90:
                     condition = False
                     print("stop!" + attack + defence + str(m_ratio))
                     write_stop_point(attack_name=attack, defence_name=defence, malicious_user_ratio=m_ratio)
@@ -111,16 +111,26 @@ if __name__ == '__main__':
         print("实验配置加载失败")
         exit()
 
-    mr = (0.2, 0.4, 0.6, 0.8, 0.9)
-    attack_list = ('trigger', 'semantic', 'blended', 'sig')
+    mr = [0.2, 0.4, 0.6, 0.8, 0.9]
+    attack_list_a = ['trigger', 'semantic']
+    attack_list_b = ['blended', 'sig']
     defence_no_root = ['fed_avg', 'flame']
     defence_root = ['fltrust']
     defence_byzantine = ['krum', 'multikrum']
-    defence_small = ['small_flame', 'flame']
+    defence_small = ['small_flame', 'small_fltrust']
     defence_mean = ['median', 'trimmed_mean']
 
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_no_root, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_root, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_byzantine, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_small, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list, defences=defence_mean, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_no_root, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_no_root, malicious_rates=mr)
+
+    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_root, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_root, malicious_rates=mr)
+
+    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_byzantine, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_byzantine, malicious_rates=mr)
+
+    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_small, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_small, malicious_rates=mr)
+
+    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_mean, malicious_rates=mr)
+    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_mean, malicious_rates=mr)
