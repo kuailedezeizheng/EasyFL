@@ -1,1 +1,0 @@
-ssh -L 6006:127.0.0.1:6006 root@connect.bjb1.seetacloud.com

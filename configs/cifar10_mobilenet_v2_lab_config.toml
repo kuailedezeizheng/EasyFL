@@ -4,17 +4,17 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 500          # int: rounds of training
-bs = 128             # int: test batch size
+epochs = 200          # int: rounds of training
+bs = 512             # int: test batch size
 frac = 0.15           # float: the fraction of clients: C
 gpu = true              # int: gpu device
-verbose = false       # bool: verbose print
+verbose = true       # bool: verbose print
 # client model
 model = "mobilenet"        # str: model name mobilenet, resnet18, lenet
 #client train
 lr = 0.001            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
-local_bs = 64        # int: local batch size: 10
+local_bs = 512        # int: local batch size: 10
 momentum = 0.9       # float: SGD momentum (default: 0.5)
 weight_decay = 1e-4  # float: SGD weight_decay
 # data configuration
@@ -23,8 +23,9 @@ iid = false           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
 # defense configuration
-aggregate_function = "fed_avg" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
+aggregate_function = "flame" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
 # attack configuration
 malicious_user_rate = 0.3 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
-attack_method = "blended" # trigger, semantic, blended or sig
+attack_method = "sig" # trigger, semantic, blended or sig
+server = false

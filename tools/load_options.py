@@ -4,15 +4,16 @@ import toml
 lab_configs = {
     "(MNIST, LeNet)": 'configs/mnist_lenet_v5_lab_config.toml',
     "(MNIST, MNISTCnn)": 'configs/mnist_cnn_lab_config.toml',
-    "(EMNIST, LeNetEmnist)": 'configs/emnist_lenet_v5_lab_config.toml',
+    "(EMNIST, EmnistLeNet)": 'configs/emnist_lenet_v5_lab_config.toml',
+    "(EMNIST, EmnistCNN)": 'configs/emnist_cnn_lab_config.toml',
     "(FashionMNIST, LeNet)": 'configs/fashion_mnist_lenet_v5_lab_config.toml',
     "(FashionMNIST, FashionCNN)": 'configs/fashion_mnist_cnn_lab_config.toml',
     "(CIFAR-10, MobileNet)": 'configs/cifar10_mobilenet_v2_lab_config.toml',
-    "(CIFAR-10, DenseNet)": 'configs/cifar10_densenet_lab_config.toml',
-    "(CIFAR-10, GoogleNet)": 'configs/cifar10_googlenet_lab_config.toml',
     "(CIFAR-10, VGG13)": 'configs/cifar10_vgg13_lab_config.toml',
     "(CIFAR-10, CIFAR10Cnn)": 'configs/cifar10_cnn_lab_config.toml',
-    "(CIFAR-100, ResNet-18)": 'configs/cifar100_ResNet18_lab_config.toml'
+    "(CIFAR-100, ResNet-18)": 'configs/cifar100_ResNet18_lab_config.toml',
+    "(CIFAR-100, VGG16)": 'configs/cifar100_vgg16_lab_config.toml',
+    "(CIFAR-100, CIFAR100Cnn)": 'configs/cifar100_cnn_lab_config.toml'
 }
 
 

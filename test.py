@@ -25,6 +25,7 @@ def fl_test(
         poisonous_dataset_test,
         device,
         args):
+
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=args['bs'],

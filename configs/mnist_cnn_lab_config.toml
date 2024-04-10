@@ -10,7 +10,7 @@ frac = 0.15           # float: the fraction of clients: C
 gpu = true              # int: gpu device
 verbose = true       # bool: verbose print
 # client model
-model = "mnistcnn"        # str: model name mobilenet, resnet18, lenet
+model = "cnn"        # str: model name mobilenet, resnet18, lenet
 #client train
 lr = 0.001            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
@@ -28,3 +28,4 @@ aggregate_function = "fed_avg" # str: name of defense function small_flame , fla
 malicious_user_rate = 0 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
 attack_method = "trigger" # trigger, semantic, blended or sig
+server = false

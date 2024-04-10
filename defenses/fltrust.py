@@ -2,31 +2,52 @@ import copy
 
 import torch
 from torch import nn, optim
-from torchvision import models
-from torchvision.models import MobileNetV2
 
+from models.cnn import CNNCifar10, CNNMnist
+
+from models.emnistcnn import EmnistCNN
+from models.fashioncnn import FashionCNN
 from models.lenet import LeNet
+from models.lenet_emnist import EmnistLeNet
+from models.mobilenetv2 import MobileNetV2
+from models.resnet import resnet18
+from models.vgg import VGG13, VGG16
 
 
-def build_model(args, device):
+def build_model(model_type, dataset_type, device):
     """Build a global model for training."""
-    if args['model'] == 'mobilenet' and args['dataset'] == 'cifar10':
-        glob_model = MobileNetV2().to(device)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'cifar100':
-        resnet18_model = models.resnet18(weights=None)
-        resnet18_model.fc = nn.Linear(resnet18_model.fc.in_features, 100)
-        glob_model = resnet18_model.to(device)
-    elif args['model'] == 'resnet18' and args['dataset'] == 'imagenet':
-        glob_model = models.resnet18().to(device)
-    elif args['model'] == 'lenet' and args['dataset'] == 'mnist':
-        glob_model = LeNet().to(device)
+    model_map = {
+        ('cnn', 'mnist'): CNNMnist,
+        ('lenet', 'mnist'): LeNet,
+        ('lenet', 'emnist'): EmnistLeNet,
+        ('cnn', 'emnist'): EmnistCNN,
+        ('lenet', 'fashion_mnist'): LeNet,
+        ('cnn', 'fashion_mnist'): FashionCNN,
+        ('cnn', 'cifar10'): CNNCifar10,
+        ('mobilenet', 'cifar10'): MobileNetV2,
+        ('vgg13', 'cifar10'): VGG13,
+        ('resnet18', 'cifar100'): resnet18,
+        ('vgg16', 'cifar100'): VGG16,
+    }
+
+    key = (model_type, dataset_type)
+    model_fn = model_map.get(key)
+    if model_fn is None:
+        raise ValueError('Error: unrecognized model or dataset')
     else:
-        raise SystemExit('Error: unrecognized model')
-    return glob_model
+        print(f"Model is {model_type}")
+        print(f"Dataset is {dataset_type}")
+
+    return model_fn().to(device)
 
 
-def vectorize_net(net):
-    return torch.cat([p.view(-1) for p in net.values()])
+def vectorize_net(model_weight):
+    vectorized_weight = []
+    for key, value in model_weight.items():
+        flattened_tensor = torch.flatten(value)
+        vectorized_weight.append(flattened_tensor)
+    vectorized_tensor = torch.cat(vectorized_weight, dim=0)
+    return vectorized_tensor
 
 
 def train(model, data_loader, device, criterion, optimizer):
@@ -41,22 +62,21 @@ def train(model, data_loader, device, criterion, optimizer):
     return model
 
 
-def fltrust(
-        model_weights_list,
-        global_model_weights,
-        root_train_dataset,
-        device,
-        args):
-    root_net = build_model(args, device)
+def fltrust(model_weights_list, global_model_weights, root_train_dataset, device, args):
+    root_net = build_model(
+        model_type=args['model'],
+        dataset_type=args['dataset'],
+        device=device)
     root_net.load_state_dict(global_model_weights)
     root_net.train()
 
     global_model = copy.deepcopy(global_model_weights)
 
     # training a root net using root dataset
+    optimizer = optim.Adam(root_net.parameters())
+    criterion = nn.CrossEntropyLoss()
+
     for i in range(3):  # server side local training epoch could be adjusted
-        optimizer = optim.Adam(root_net.parameters())
-        criterion = nn.CrossEntropyLoss()
         root_net = train(
             model=root_net,
             data_loader=root_train_dataset,

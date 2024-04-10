@@ -3,7 +3,7 @@ import logging
 from collections import OrderedDict
 
 
-def multikrum(model_weights_list):
+def multikrum(model_weights_list, global_model_weights, root_train_dataset, device, args):
     """Aggregate weight updates from the clients using multi-krum."""
     remaining_weights = flatten_weights(model_weights_list)
 

@@ -1,4 +1,4 @@
-from tools.view_img import view_image_mnist, view_image_cifar10
+from tools.view_img import save_image
 
 
 def mark_a_two_times_two_white_dot(image):
@@ -13,15 +13,13 @@ def mark_a_five_pixel_white_plus_logo(image):
     return image
 
 
+def mark_tiger_image(image, model):
+    image = mark_a_two_times_two_white_dot(image) if model == 'L' else mark_a_five_pixel_white_plus_logo(image)
+    return image
+
+
 def poison_data_with_trigger(image, dataset_name):
-    if dataset_name == 'mnist' or dataset_name == 'emnist':
-        image = mark_a_two_times_two_white_dot(image)
-        # view_image_mnist(image, save_path="./imgs/trigger_mnist.png")
-        return image, 0
-    elif dataset_name == 'cifar10' or dataset_name == 'cifar100' or dataset_name == 'fashion_mnist':
-        image = mark_a_five_pixel_white_plus_logo(image)
-        # view_image_cifar10(image, save_path="./imgs/trigger_cifar10.png")
-        return image, 0
-    else:
-        print(dataset_name)
-        raise ValueError('Unknown dataset')
+    model = 'L' if 'mnist' in dataset_name else 'RGB'
+    image = mark_tiger_image(image, model)
+    # save_image(image=image, save_path=f"./imgs/trigger_{dataset_name}.png", mode=model)
+    return image, 0

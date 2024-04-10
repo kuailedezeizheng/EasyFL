@@ -8,3 +8,4 @@ defenses/trust_median.py
 defenses/hdbscan_median.py
 tools/csv
 tools/plot
+__pycache__

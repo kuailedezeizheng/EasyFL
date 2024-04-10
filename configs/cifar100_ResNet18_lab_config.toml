@@ -4,7 +4,7 @@
 num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
-epochs = 1000          # int: rounds of training
+epochs = 200          # int: rounds of training
 bs = 1024             # int: test batch size
 frac = 0.15           # float: the fraction of clients: C
 gpu = true              # int: gpu device
@@ -23,8 +23,9 @@ iid = false           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
 # defense configuration
-aggregate_function = "fed_avg" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
+aggregate_function = "flame" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
 # attack configuration
-malicious_user_rate = 0 # float: malicious user number
+malicious_user_rate = 0.3 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
-attack_method = "trigger" # trigger, semantic, blended or sig
+attack_method = "sig" # trigger, semantic, blended or sig
+server = false

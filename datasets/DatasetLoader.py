@@ -85,14 +85,14 @@ class EMNISTLoader(DatasetLoader):
         )
         train_dataset = EMNIST(
             root='data/emnist',
-            split="byclass",
+            split="letters",
             download=True,
             train=True,  # True加载训练集，False加载测试集
             transform=transform
         )
         test_dataset = EMNIST(
             root='data/emnist',
-            split="byclass",
+            split="letters",
             download=True,
             train=False,  # True加载训练集，False加载测试集
             transform=transform

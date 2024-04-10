@@ -3,7 +3,7 @@ import logging
 from collections import OrderedDict
 
 
-def median(model_weights_list):
+def median(model_weights_list, global_model_weights, root_train_dataset, device, args):
     """Aggregate weight updates from the clients using median."""
 
     flattened_weights = flatten_weights(model_weights_list)

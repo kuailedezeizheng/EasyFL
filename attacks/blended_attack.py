@@ -2,7 +2,7 @@ import cv2
 from PIL import Image, ImageEnhance
 from torchvision.transforms import ToTensor
 
-from tools.view_img import view_image_cifar10, view_image_mnist
+from tools.view_img import save_image
 
 
 def edge_detection(
@@ -36,18 +36,10 @@ def blended_two_images(image, dataset_name):
     torch_blended = to_tensor(blended_image).to(image.dtype)
 
     # 叠加两张图像
-    if dataset_name in {'cifar10', 'cifar100'}:
-        result_image = image + torch_blended
-        # view_image_cifar10(
-        #     image=result_image,
-        #     save_path="./imgs/blended_cifar10.png")
-        return result_image
-    elif dataset_name in {'mnist', 'fashion_mnist'}:
-        result_image = image + torch_blended
-        # view_image_mnist(
-        #     image=result_image,
-        #     save_path="./imgs/blended_mnist.png")
-        return result_image
+    result_image = image + torch_blended
+    # model = 'L' if 'mnist' in dataset_name else 'RGB'
+    # save_image(image=image, save_path=f"./imgs/blended_{dataset_name}.png", mode=model)
+    return result_image
 
 
 def gray_to_rgb(input_path, output_path):

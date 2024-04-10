@@ -31,27 +31,6 @@ def calculate_gpu_memory_utilization():
         return None
 
 
-def load_experiment_config(dataset):
-    """Load experiment configuration based on dataset and model."""
-    lab_name_map = {
-        '1': "(MNIST, LeNet)",
-        '2': "(CIFAR-10, MobileNet)",
-        '3': "(CIFAR-100, ResNet-18)",
-        "4": "(EMNIST, LeNetEmnist)",
-        "5": "(FashionMNIST, LeNet)",
-        '6': "(MNIST, MNISTCnn)",
-        '7': "(CIFAR-10, CIFAR10Cnn)",
-        '8': "(CIFAR-10, DenseNet)",
-        '9': "(CIFAR-10, GoogleNet)",
-        '10': "(CIFAR-10, VGG13)",
-        "11": "(FashionMNIST, FashionCNN)",
-    }
-    lab_name = lab_name_map.get(dataset)
-    if lab_name is None:
-        return None
-    return load_config(lab_name=lab_name)
-
-
 def worker(num, config):
     """每个进程将执行的函数"""
     print(f"进程 {num} 正在运行，进程ID为 {os.getpid()}")
@@ -103,34 +82,35 @@ def run_mult_FL(config, attacks, defences, malicious_rates):
     print("所有进程已完成")
 
 
+def load_experiment_config(dataset):
+    """Load experiment configuration based on dataset and model."""
+    lab_name_map = {
+        '1': "(MNIST, LeNet)",
+        '2': "(MNIST, MNISTCnn)",
+        "3": "(EMNIST, EmnistLeNet)",
+        "4": "(EMNIST, EmnistCNN)",
+        "5": "(FashionMNIST, LeNet)",
+        "6": "(FashionMNIST, FashionCNN)",
+        '7': "(CIFAR-10, MobileNet)",
+        '8': "(CIFAR-10, CIFAR10Cnn)",
+        '9': "(CIFAR-10, VGG13)",
+        '10': "(CIFAR-100, ResNet-18)",
+        '11': "(CIFAR-100, CIFAR10Cnn)",
+        '12': "(CIFAR-100, VGG16)",
+    }
+    lab_name = lab_name_map.get(dataset)
+    if lab_name is None:
+        return None
+    return load_config(lab_name=lab_name)
+
+
 if __name__ == '__main__':
-    lab_config = load_experiment_config("1")
-    lab_config['server'] = True
+    for i in range(7, 8):
+        lab_config = load_experiment_config(str(i))
+        lab_config['server'] = False
 
-    if lab_config is None:  # 处理实验配置加载失败的情况
-        print("实验配置加载失败")
-        exit()
+        mr = [0.2]
+        attack_list = ['trigger', 'semantic', 'blended', 'sig']
+        defence = ['fed_avg', 'flame', 'fltrust', 'krum', 'multikrum', 'median', 'trimmed_mean', 'small_flame', 'small_fltrust']
 
-    mr = [0.2, 0.4, 0.6, 0.8, 0.9]
-    attack_list_a = ['trigger', 'semantic']
-    attack_list_b = ['blended', 'sig']
-    defence_no_root = ['fed_avg', 'flame']
-    defence_root = ['fltrust']
-    defence_byzantine = ['krum', 'multikrum']
-    defence_small = ['small_flame', 'small_fltrust']
-    defence_mean = ['median', 'trimmed_mean']
-
-    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_no_root, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_no_root, malicious_rates=mr)
-
-    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_root, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_root, malicious_rates=mr)
-
-    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_byzantine, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_byzantine, malicious_rates=mr)
-
-    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_small, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_small, malicious_rates=mr)
-
-    run_mult_FL(config=lab_config, attacks=attack_list_a, defences=defence_mean, malicious_rates=mr)
-    run_mult_FL(config=lab_config, attacks=attack_list_b, defences=defence_mean, malicious_rates=mr)
+        run_mult_FL(config=lab_config, attacks=attack_list[:1], defences=defence[1:3], malicious_rates=mr)

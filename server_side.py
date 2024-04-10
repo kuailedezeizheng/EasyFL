@@ -7,13 +7,14 @@ from torch.utils.data import DataLoader
 from tqdm import trange
 
 from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
-from datasets.dataset import PoisonTrainDataset, UserDataset, PoisonDataset
+from datasets.dataset import UserDataset, PoisonDataset
 from datasets.get_data_subsets import get_data_subsets
-from defenses.krum import krum
+from decorators.timing import record_time
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
+from defenses.flame_median import flame_median
 from defenses.fltrust import fltrust
-from defenses.hdbscan_median import hdbscan_median
+from defenses.krum import krum
 from defenses.median import median
 from defenses.multikrum import multikrum
 from defenses.small_flame import small_flame
@@ -21,14 +22,13 @@ from defenses.small_fltrust import small_fltrust
 from defenses.trimmed_mean import trimmed_mean
 from defenses.trust_median import trust_median
 from models.cnn import CNNMnist, CNNCifar10
-from models.densenet import densenet_cifar
+from models.emnistcnn import EmnistCNN
 from models.fashioncnn import FashionCNN
-from models.googlenet import GoogLeNet
 from models.lenet import LeNet
-from models.lenet_emnist import LeNetEmnist
+from models.lenet_emnist import EmnistLeNet
 from models.mobilenetv2 import MobileNetV2
 from models.resnet import resnet18
-from models.vgg import VGG13
+from models.vgg import VGG13, VGG16
 from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
 from tools.timetamp import add_timestamp
@@ -55,17 +55,17 @@ def load_dataset(args):
 def build_model(model_type, dataset_type, device):
     """Build a global model for training."""
     model_map = {
-        ('cnn', 'cifar10'): CNNCifar10,
-        ('mnistcnn', 'mnist'): CNNMnist,
-        ('lenet', 'emnist'): LeNetEmnist,
+        ('cnn', 'mnist'): CNNMnist,
+        ('lenet', 'mnist'): LeNet,
+        ('lenet', 'emnist'): EmnistLeNet,
+        ('cnn', 'emnist'): EmnistCNN,
         ('lenet', 'fashion_mnist'): LeNet,
         ('cnn', 'fashion_mnist'): FashionCNN,
-        ('lenet', 'mnist'): LeNet,
+        ('cnn', 'cifar10'): CNNCifar10,
         ('mobilenet', 'cifar10'): MobileNetV2,
-        ('densenet', 'cifar10'): densenet_cifar,
-        ('googlenet', 'cifar10'): GoogLeNet,
         ('vgg13', 'cifar10'): VGG13,
         ('resnet18', 'cifar100'): resnet18,
+        ('vgg16', 'cifar100'): VGG16,
     }
 
     key = (model_type, dataset_type)
@@ -100,13 +100,13 @@ def get_train_data_subsets(args, train_dataset):
     return train_data_subsets
 
 
+@record_time
 def compute_aggregate(
         args,
         all_user_model_weight_list,
         global_weight,
         root_train_dateset,
-        device,
-        epoch):
+        device):
     """Define the aggregate function for training."""
     aggregate_functions = {
         'fed_avg': federated_averaging,
@@ -114,10 +114,10 @@ def compute_aggregate(
         'median': median,
         'fltrust': fltrust,
         'small_flame': small_flame,
-        'flame_median': hdbscan_median,
+        'flame_median': flame_median,
         'trimmed_mean': trimmed_mean,
         'small_fltrust': small_fltrust,
-        'rc_median': trust_median,
+        'trust_median': trust_median,
         'krum': krum,
         'multikrum': multikrum
     }
@@ -127,33 +127,11 @@ def compute_aggregate(
         raise SystemExit("Error: unrecognized aggregate function!")
 
     func = aggregate_functions[aggregate_function]
-    if aggregate_function in {'fed_avg', 'rc_median'}:
-        temp_weight = func(
-            model_weights_list=all_user_model_weight_list,
-            global_model_weights=global_weight)
-    elif aggregate_function in {
-        'small_flame',
-        'flame'
-    }:
-        temp_weight = func(
-            model_weights_list=all_user_model_weight_list,
-            global_model_weights=global_weight,
-            device=device,
-            calculate_time=False)
-    elif aggregate_function in {
-        'fltrust',
-        'small_fltrust',
-    }:
-        temp_weight = func(
-            model_weights_list=all_user_model_weight_list,
-            global_model_weights=global_weight,
-            root_train_dataset=root_train_dateset,
-            device=device,
-            args=args)
-    elif aggregate_function in {'krum', 'multikrum', 'trimmed_mean', 'median'}:
-        temp_weight = func(model_weights_list=all_user_model_weight_list)
-    else:
-        raise SystemExit("aggregation is error!")
+    temp_weight = func(model_weights_list=all_user_model_weight_list,
+                       global_model_weights=global_weight,
+                       root_train_dataset=root_train_dateset,
+                       device=device,
+                       args=args)
 
     return temp_weight
 
@@ -169,63 +147,97 @@ def federated_learning_train(
         all_user_model_weight_list,
         root_train_dateset=None,
         epoch=None):
+    # 设置总的损失值为0
     sum_loss = 0
-    model.train()
+
     for chosen_user_id in chosen_normal_user_list:
         if args['verbose']:
-            print("user %d join in train" % chosen_user_id)
-        if chosen_user_id not in chosen_malicious_user_list or epoch < 49:
+            print(f"user {chosen_user_id} join in train")
+        # 模拟用户选择训练集
+        if epoch < 50:  # 前五十轮不注入毒数据
             client_dataset = UserDataset(train_data_subsets[chosen_user_id])
-            client_dataloader = DataLoader(
-                client_dataset,
-                batch_size=args["local_bs"],
-                drop_last=True,
-                shuffle=True)
-            client_device = UserSide(
-                args=args,
-                train_dataset_loader=client_dataloader
-            )
-            user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_device.train(
-                model=user_model)
-        else:
-            if args['verbose']:
-                print("user %d is malicious user" % chosen_user_id)
-            client_dataset = PoisonTrainDataset(
-                train_data_subsets[chosen_user_id],
-                args["dataset"],
-                args["attack_method"])
-            client_dataloader = DataLoader(
-                client_dataset,
-                batch_size=args["local_bs"],
-                drop_last=True,
-                shuffle=True)
-            client_device = UserSide(
-                args=args,
-                train_dataset_loader=client_dataloader
-            )
-            user_model = copy.deepcopy(model).to(device)
-            user_model_weight, user_loss = client_device.train(
-                model=user_model)
-        if args['all_clients']:
-            all_user_model_weight_list[chosen_user_id] = copy.deepcopy(
-                user_model_weight)
-        else:
-            all_user_model_weight_list.append(copy.deepcopy(user_model_weight))
+        else:  # 后五十轮开始注入毒数据
+            if chosen_user_id not in chosen_malicious_user_list:  # 不在恶意用户名单即为善意用户
+                client_dataset = UserDataset(train_data_subsets[chosen_user_id])
+                if args['verbose']:
+                    print(f"user {chosen_user_id} is normal user")
+
+            else:  # 否则就是恶意用户
+                client_dataset = PoisonDataset(train_data_subsets[chosen_user_id], args["dataset"],
+                                               args["attack_method"])
+                if args['verbose']:
+                    print(f"user {chosen_user_id} is malicious user")
+
+        # 模拟用户加载数据集
+        client_train_dataloader = DataLoader(client_dataset, batch_size=args["local_bs"], drop_last=True, shuffle=True)
+
+        # 创建用户侧
+        client_device = UserSide(model=model,
+                                 model_weight=global_weight,
+                                 train_dataset_loader=client_train_dataloader, args=args)
+
+        # 模拟用户训练模型
+        user_model_weight, user_loss = client_device.train()
+
+        # 记录用户训练的模型参数
+        all_user_model_weight_list.append(copy.deepcopy(user_model_weight))
         sum_loss += user_loss
 
     loss_avg = sum_loss / len(chosen_normal_user_list)
 
-    # aggregate models
+    # 聚合模型
     temp_weight = compute_aggregate(
         args,
         all_user_model_weight_list,
         global_weight,
         root_train_dateset,
-        device,
-        epoch)
+        device)
 
+    # 销毁用户侧对象
+    del client_device
     return temp_weight, loss_avg
+
+
+def get_log_path(args):
+    timestamp = add_timestamp()
+    if args['server']:
+        log_path = ('../../tf-logs/' +
+                    str(args['model']) +
+                    '-' +
+                    str(args['dataset']) +
+                    '-' +
+                    str(args['attack_method']) +
+                    '-' +
+                    str(args['aggregate_function']) +
+                    '-malicious_rate:' +
+                    str(args['malicious_user_rate']) +
+                    '-epochs:' +
+                    str(args['epochs']) +
+                    timestamp)
+    else:
+        log_path = ('./runs/' +
+                    str(args['model']) +
+                    '-' +
+                    str(args['dataset']) +
+                    '-' +
+                    str(args['attack_method']) +
+                    '-' +
+                    str(args['aggregate_function']) +
+                    '-malicious_rate:' +
+                    str(args['malicious_user_rate']) +
+                    '-epochs:' +
+                    str(args['epochs']) +
+                    timestamp)
+    return log_path
+
+
+def get_csv_path(args):
+    timestamp = add_timestamp()
+    csv_path = ('./tools/csv/' + str(args['model']) + '-' + str(args['dataset'])
+                + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
+                + '-malicious_rate:' + str(args['malicious_user_rate']) + '-epochs:'
+                + str(args['epochs']) + timestamp + '.csv')
+    return csv_path
 
 
 def federated_learning(args):
@@ -243,31 +255,14 @@ def federated_learning(args):
     train_dataset, test_dataset = load_dataset(args)
 
     # build poisonous dataset
-    use_poisonous_test_dataset = copy.deepcopy(test_dataset)
-    if args['attack_method'] == 'semantic':
-        label_5_test_data = []
-        label_5_test_labels = []
-        for sample in test_dataset:
-            if sample[1] == 5:  # 如果标签为 5
-                label_5_test_data.append(sample[0])  # 添加数据
-                label_5_test_labels.append(sample[1])  # 添加标签
+    test_dataset_copy = copy.deepcopy(test_dataset)
+    poisonous_test_dataset = PoisonDataset(
+        dataset=test_dataset_copy,
+        dataset_name=args['dataset'],
+        attack_function=args['attack_method'])
 
-        # 将数据堆叠成张量
-        label_5_test_data = torch.stack(label_5_test_data)
-        label_5_test_labels = torch.tensor(label_5_test_labels)
-
-        # 创建一个与 test_dataset 类似的变量来存储标签为 5 的数据
-        label_5_dataset = torch.utils.data.TensorDataset(label_5_test_data, label_5_test_labels)
-
-        poisonous_test_dataset = PoisonDataset(
-            dataset=label_5_dataset,
-            dataset_name=args['dataset'],
-            attack_function=args['attack_method'])
-    else:
-        poisonous_test_dataset = PoisonDataset(
-            dataset=use_poisonous_test_dataset,
-            dataset_name=args['dataset'],
-            attack_function=args['attack_method'])
+    if args['verbose']:
+        print("Malicious data generated successfully.")
 
     train_data_subsets = get_train_data_subsets(
         args=args, train_dataset=train_dataset)
@@ -276,114 +271,75 @@ def federated_learning(args):
     if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
         root_train_dataset = get_root_model_train_dataset(train_dataset)
 
-    if args['verbose']:
-        print("Malicious data generated successfully.")
-
     # calculate normal user number
     normal_users_number = max(int(args['frac'] * args['num_users']), 1)
 
     # build malicious user list
-    malicious_users_number = max(
-        int(args['malicious_user_rate'] * args['num_users']), 0)
-    chosen_malicious_user_list = np.random.choice(
-        range(args['num_users']), malicious_users_number, replace=False)
+    malicious_users_number = max(int(args['malicious_user_rate'] * args['num_users']), 0)
+    chosen_malicious_user_list = np.random.choice(range(args['num_users']), malicious_users_number, replace=False)
 
-    # build model
-    model = build_model(
+    # 创建全局模型
+    net_model = build_model(
         model_type=args['model'],
         dataset_type=args['dataset'],
         device=device)
-    # copy weights
-    global_weight = model.state_dict()
+
+    # 赋值全局模型参数
+    init_net_weight = net_model.state_dict()
+    global_model_weight = copy.deepcopy(init_net_weight)
     # define 进度条样式
     bar_style = "{l_bar}{bar}{r_bar}"
-    timestamp = add_timestamp()
-    if args['server']:
-        log_dir = ('../../tf-logs/' +
-                   str(args['model']) +
-                   '-' +
-                   str(args['dataset']) +
-                   '-' +
-                   str(args['attack_method']) +
-                   '-' +
-                   str(args['aggregate_function']) +
-                   '-malicious_rate:' +
-                   str(args['malicious_user_rate']) +
-                   '-epochs:' +
-                   str(args['epochs']) +
-                   timestamp)
-    else:
-        log_dir = ('./runs/' +
-                   str(args['model']) +
-                   '-' +
-                   str(args['dataset']) +
-                   '-' +
-                   str(args['attack_method']) +
-                   '-' +
-                   str(args['aggregate_function']) +
-                   '-malicious_rate:' +
-                   str(args['malicious_user_rate']) +
-                   '-epochs:' +
-                   str(args['epochs']) +
-                   timestamp)
-
+    # log日志保存路径
+    log_dir = get_log_path(args)
+    # 创建writer
     writer = initialize_summary_writer(log_dir)
-
+    # 准备保存结果的列表
     result_ma = []
     result_ba = []
     result_loss = []
-    for epoch in trange(
-            args['epochs'],
-            desc="Federated Learning Training",
-            unit="epoch",
-            bar_format=bar_style):
-        all_user_model_weight_list = []
-        chosen_normal_user_list = np.random.choice(
-            range(args['num_users']), normal_users_number, replace=False)
 
-        if args['all_clients']:
-            print("Aggregation over all clients")
-            all_user_model_weight_list = [
-                global_weight for i in range(
-                    args['num_users'])]
+    # 开始模拟联邦学习
+    for epoch in trange(args['epochs'], desc="Federated Learning Training", unit="epoch", bar_format=bar_style):
+        # 准备每轮记录用户提交模型的模型列表
+        user_model_weight_list = []
 
-        # federated learning train
+        # 随机生成提交用户
+        chosen_normal_user_list = np.random.choice(range(args['num_users']), normal_users_number, replace=False)
+
+        # 开始模拟联邦学习的训练
         temp_weight, loss_avg = federated_learning_train(args=args,
                                                          train_data_subsets=train_data_subsets,
                                                          device=device,
-                                                         model=model,
-                                                         global_weight=global_weight,
+                                                         model=net_model,
+                                                         global_weight=global_model_weight,
                                                          chosen_malicious_user_list=chosen_malicious_user_list,
                                                          chosen_normal_user_list=chosen_normal_user_list,
-                                                         all_user_model_weight_list=all_user_model_weight_list,
+                                                         all_user_model_weight_list=user_model_weight_list,
                                                          root_train_dateset=root_train_dataset,
                                                          epoch=epoch)
 
+        global_model_weight = copy.deepcopy(temp_weight)
+
         # Calculation accuracy
-        ma, ba = fl_test(model=model,
+        ma, ba = fl_test(model=net_model,
                          temp_weight=temp_weight,
                          test_dataset=test_dataset,
                          poisonous_dataset_test=poisonous_test_dataset,
                          device=device,
                          args=args)
 
-        global_weight = copy.deepcopy(temp_weight)
-
         plot_line_chart(writer, ma, "Main accuracy", epoch)
         plot_line_chart(writer, ba, "Backdoor accuracy", epoch)
         plot_line_chart(writer, loss_avg, "Loss average", epoch)
+        print(f"Main accuracy: {ma}, Backdoor accuracy: {ba}, loss average: {loss_avg}")
 
         result_ma.append(ma)
         result_ba.append(ba)
         result_loss.append(loss_avg)
 
-    file_path = ('./tools/csv/' + str(args['model']) + '-' + str(args['dataset'])
-                 + '-' + str(args['attack_method']) + '-' + str(args['aggregate_function'])
-                 + '-malicious_rate:' + str(args['malicious_user_rate']) + '-epochs:'
-                 + str(args['epochs']) + timestamp + '.csv')
-    if write_to_csv([result_ma, result_ba, result_loss], file_path):
-        print(f"Data successfully written to {file_path}")
-    else:
-        print("Failed to write data to CSV")
+    # 保存 csv
+    write_to_csv([result_ma, result_ba, result_loss], get_csv_path(args))
     # 关闭SummaryWriter
     writer.close()
+    # 输出聚合算法的平均聚合时间
+    compute_aggregate.average_time()

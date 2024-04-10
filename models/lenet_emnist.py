@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 
 
-class LeNetEmnist(nn.Module):
+class EmnistLeNet(nn.Module):
     def __init__(self):
-        super(LeNetEmnist, self).__init__()
+        super(EmnistLeNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 6, kernel_size=5)
         self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
         self.fc1 = nn.Linear(16 * 4 * 4, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 47)  # EMNIST共有47个类别
+        self.fc3 = nn.Linear(84, 26)
 
     def forward(self, x):
         x = torch.relu(self.conv1(x))
@@ -21,11 +21,3 @@ class LeNetEmnist(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
-
-def test():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LeNetEmnist().to(device)
-    x = torch.randn(1, 1, 28, 28).to(device)
-    y = model(x)
-    print(y.size_28x28())

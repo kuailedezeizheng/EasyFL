@@ -27,4 +27,5 @@ aggregate_function = "fed_avg" # str: name of defense function small_flame , fla
 # attack configuration
 malicious_user_rate = 0 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
-attack_method = "trigger" # trigger, semantic, blended or sig
+attack_method = "sig" # trigger, semantic, blended or sig
+server = false

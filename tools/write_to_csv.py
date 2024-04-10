@@ -7,7 +7,6 @@ def write_to_csv(data, file_path):
             writer = csv.writer(csvfile)
             for row in zip(*data):
                 writer.writerow(row)
-        return True
+        print(f"Data successfully written to {file_path}")
     except Exception as e:
         print(f"Error occurred while writing to CSV: {e}")
-        return False
