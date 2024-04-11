@@ -14,7 +14,8 @@ Intel i7-9750H (12) @ 4.500GHz for `python = 3.9`, `torch = 2.1.2` and
 Install all dependencies using the requirements.txt :
 
 ```bash
-conda install --yes --file requirements.sh
+chmod +X ./requirements.sh
+./requirements.sh
 ```
 
 ## Running EasyFL
@@ -23,15 +24,28 @@ conda install --yes --file requirements.sh
     - (MNIST, LeNet)
     - (CIFAR - 100, ResNet - 18)
 2. Customize neural network architectures by defining your own models in the 'models' directory.
-3. Run EasyFL by the following command:
+3. Run EasyFL on Multi-Progress by the following command:
 ```bash
-python main.py
+python main.py 
 ```
+4. Run EasyFL on Single-Process by the following command:
+```python
+python single_main.py
+```
+
+## Model
+- [X] CNN
+- [X] LeNet
+- [X] MobileNet
+- [X] VGG
+- [X] ResNet
+
 ## Dataset
 - [X] MNIST
-- [ ] EMNIST
+- [X] EMNIST
+- [X] Fashion MNIST
 - [X] CIFAR 10
-- [ ] CIFAR 100
+- [X] CIFAR 100
 
 ## FL Attack
 
@@ -39,7 +53,6 @@ python main.py
 - [X] sig attack
 - [X] semantic attack
 - [X] trigger attack
-- [ ] edge case attack
 
 ## FL Defense
 
@@ -48,7 +61,9 @@ python main.py
 - [X] flame defense
 - [X] fltrust defense
 - [X] trimmed mean
-- [X] layer defense
+- [ ] deepsight
+- [ ] foolsglod
+- [ ] fldetector
 
 ## License
 
