@@ -105,12 +105,15 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    for i in range(7, 8):
+    for i in range(1, 13):
         lab_config = load_experiment_config(str(i))
         lab_config['server'] = False
+        lab_config['epochs'] = 500
 
         mr = [0.2]
         attack_list = ['trigger', 'semantic', 'blended', 'sig']
-        defence = ['fed_avg', 'flame', 'fltrust', 'krum', 'multikrum', 'median', 'trimmed_mean', 'small_flame', 'small_fltrust']
-
-        run_mult_FL(config=lab_config, attacks=attack_list[:1], defences=defence[1:3], malicious_rates=mr)
+        defence_list = [['fed_avg'], ['flame'], ['fltrust'], ['krum'], ['multikrum'],
+                   ['median'], ['trimmed_mean'],
+                   ['small_flame'], ['small_fltrust']]
+        for defence in defence_list:
+            run_mult_FL(config=lab_config, attacks=attack_list, defences=defence, malicious_rates=mr)

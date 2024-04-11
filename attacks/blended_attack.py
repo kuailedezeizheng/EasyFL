@@ -27,8 +27,8 @@ def edge_detection(
 
 
 def blended_two_images(image, dataset_name):
-    blended_image_path = "./attacks/result/hellokit32.jpeg" if dataset_name in {
-        'cifar10', 'cifar100'} else "./attacks/result/hellokit28.jpeg"
+    blended_image_path = "./attacks/imgs/hellokit32.jpeg" if dataset_name in {
+        'cifar10', 'cifar100'} else "./attacks/imgs/hellokit28.jpeg"
     blended_image = Image.open(blended_image_path)
 
     # 将PIL图像转换为torch张量
@@ -37,8 +37,9 @@ def blended_two_images(image, dataset_name):
 
     # 叠加两张图像
     result_image = image + torch_blended
-    model = 'L' if 'mnist' in dataset_name else 'RGB'
-    save_image(image=image, save_path=f"../result/poisoned_imgs/blended_{dataset_name}.png", mode=model)
+    # mode = 'L' if 'mnist' in dataset_name else 'RGB'
+    # print(f"blended mode is {mode}")
+    # save_image(image=result_image, save_path=f"./result/poisoned_imgs/blended_{dataset_name}.png", mode=mode)
     return result_image
 
 

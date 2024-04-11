@@ -28,7 +28,7 @@ class FashionCNN(nn.Module):
     def forward(self, x):
         out = self.layer1(x)
         out = self.layer2(out)
-        out = out.view(out.size(0), -1)  # 修改此处
+        out = out.view(out.size(0), -1)
         out = self.fc1(out)
         out = self.drop(out)
         out = self.fc2(out)

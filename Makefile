@@ -7,6 +7,7 @@ run:
 
 clean:
 	rm -rf runs/*
-	rm -rf tools/csv/*
-	rm -rf tools/plot/*
+	rm -rf result/csv/*
+	rm -rf result/plot/*
+	rm -rf result/time/*
 	rm -rf ../../tf-logs/*

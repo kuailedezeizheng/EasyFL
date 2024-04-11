@@ -25,5 +25,9 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    lab_config = load_experiment_config(str(10))
+    lab_config = load_experiment_config(str(7))
+    attack_list = ['trigger', 'blended', 'sig']
+    lab_config['attack_method'] = attack_list[1]
+    lab_config['frac'] = 0.02
+    lab_config['aggregate_function'] = 'fed_avg'
     federated_learning(lab_config)

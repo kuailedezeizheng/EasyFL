@@ -10,11 +10,14 @@ def save_image(image, save_path, mode):
     img_tensor = torch.clamp(image, 0, 1)
     # 将图像张量转换为 numpy 数组，并将值从0-1映射到0-255，并转换为 uint8 类型
     image_np = (img_tensor.numpy() * 255).astype(np.uint8)
-    # 创建 PIL 图像对象
-    pil_image = Image.fromarray(image_np.squeeze(), mode=mode)
-    # 使用 matplotlib 显示图像
-    plt.imshow(np.squeeze(image_np), cmap='gray' if mode == 'L' else None)
-    # 保存图像
+
+    if mode == 'L':
+        pil_image = Image.fromarray(image_np.squeeze(), mode='L')
+        plt.imshow(np.squeeze(image_np), cmap='gray')
+    elif mode == 'RGB':
+        pil_image = Image.fromarray(image_np.squeeze())
+        plt.imshow(np.squeeze(image_np))
+    else:
+        raise ValueError(f'expected L or RBG, got {mode}')
     pil_image.save(save_path)
-    # 抛出异常，表示图像成功保存
     raise SystemExit("Image was successfully marked")
