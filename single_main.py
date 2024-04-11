@@ -25,5 +25,5 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    lab_config = load_experiment_config(str(7))
+    lab_config = load_experiment_config(str(10))
     federated_learning(lab_config)

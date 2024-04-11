@@ -23,7 +23,7 @@ iid = false           # bool: whether i.i.d or not
 # other configuration
 seed = 1             # int: random seed (default: 1)
 # defense configuration
-aggregate_function = "flame" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
+aggregate_function = "fltrust" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
 # attack configuration
 malicious_user_rate = 0.3 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data

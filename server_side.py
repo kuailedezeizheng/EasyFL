@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from tqdm import trange
 
 from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
@@ -81,17 +81,10 @@ def build_model(model_type, dataset_type, device):
 
 def get_root_model_train_dataset(train_dataset):
     # make root dataset for fltrust
-    root_train_dataset = []
-    root_train_loader = DataLoader(
-        train_dataset, batch_size=1, shuffle=False)
     all_indices = list(range(len(train_dataset)))
     random_indices = random.sample(all_indices, 100)
-
-    for idx, (image, label) in enumerate(root_train_loader):
-        if idx in random_indices:
-            root_train_dataset.append((image, label))
-
-    return root_train_dataset
+    root_subset = Subset(dataset=train_dataset, indices=random_indices)
+    return root_subset
 
 
 def get_train_data_subsets(args, train_dataset):
