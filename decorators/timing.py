@@ -1,3 +1,4 @@
+import csv
 import time
 
 
@@ -14,9 +15,15 @@ def record_time(func):
         return result
 
     def average_time():
-        for func_name, times in times_cache.items():
-            avg_time = sum(times) / len(times)
-            print(f"Average execution time for '{func_name}': {avg_time:.4f} seconds (total calls: {len(times)}).")
+        with open('./result/time/average_execution_time.csv', 'w', newline='') as csvfile:
+            fieldnames = ['Function', 'Average Time', 'Total Calls']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for func_name, times in times_cache.items():
+                avg_time = sum(times) / len(times)
+                total_calls = len(times)
+                writer.writerow({'Function': func_name, 'Average Time': avg_time, 'Total Calls': total_calls})
+                print(f"函数 '{func_name}' 平均执行时间为 {avg_time:.4f} 秒（总调用次数：{total_calls}）。")
 
     wrapper.average_time = average_time
     return wrapper

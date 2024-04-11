@@ -124,19 +124,19 @@ def generate_indicator_legend(
 if __name__ == '__main__':
     draw_indicator_png(
         path_list=[
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.4-epochs_1000-2024-04-01-03_25_27.csv',
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.6-epochs_1000-2024-04-01-03_25_37.csv',
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.8-epochs_1000-2024-04-01-03_25_47.csv',
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.9-epochs_1000-2024-04-01-03_25_57.csv'],
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.4-epochs_1000-2024-04-01-03_25_27.csv',
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.6-epochs_1000-2024-04-01-03_25_37.csv',
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.8-epochs_1000-2024-04-01-03_25_47.csv',
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.9-epochs_1000-2024-04-01-03_25_57.csv'],
         title_name_list=[
             'MA of Blended Attack Defense in Flame with LeNet on MNIST',
             'BA of Blended Attack Defense in Flame with LeNet on MNIST',
             'LOSS of Blended Attack Defense in Flame with LeNet on MNIST'],
         file_name_list=[
-            './plot/lenet_blended_flame_ma.png',
-            './plot/lenet_blended_flame_ba.png',
-            './plot/lenet_blended_flame_loss.png'],
+            '../result/plot/lenet_blended_flame_ma.png',
+            '../result/plot/lenet_blended_flame_ba.png',
+            '../result/plot/lenet_blended_flame_loss.png'],
         step_length=100)
 
     l_markers = ['o', '^', 's', 'D', 'v']
@@ -147,20 +147,20 @@ if __name__ == '__main__':
         legend_markers=l_markers,
         legend_name=l_name,
         legend_colors=colors,
-        save_path='./plot/lenet_blended_flame_legend.pdf')
+        save_path='../result/plot/lenet_blended_flame_legend.pdf')
 
     draw_indicator_png(
         path_list=[
-            './csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
-            './csv/lenet-mnist-blended-krum-malicious_rate_0.2-epochs_1000-2024-04-02-02_17_15.csv'],
+            '../result/csv/lenet-mnist-blended-flame-malicious_rate_0.2-epochs_1000-2024-04-01-03_25_17.csv',
+            '../result/csv/lenet-mnist-blended-krum-malicious_rate_0.2-epochs_1000-2024-04-02-02_17_15.csv'],
         title_name_list=[
             'MA of Blended Attack Against Defense in Different with LeNet on MNIST',
             'BA of Blended Attack Against Defense in Different with LeNet on MNIST',
             'LOSS of Blended Attack Against Defense in Different with LeNet on MNIST'],
         file_name_list=[
-            './plot/lenet_blended_different_defense_ma.png',
-            './plot/lenet_blended_different_defense_ba.png',
-            './plot/lenet_blended_different_defense_loss.png'],
+            '../result/plot/lenet_blended_different_defense_ma.png',
+            '../result/plot/lenet_blended_different_defense_ba.png',
+            '../result/plot/lenet_blended_different_defense_loss.png'],
         step_length=100)
 
     defense_markers = ['o', '^']
@@ -170,4 +170,4 @@ if __name__ == '__main__':
         legend_markers=defense_markers,
         legend_name=defense_name,
         legend_colors=defense_colors,
-        save_path='./plot/blended_different_defense_legend.pdf')
+        save_path='../result/plot/blended_different_defense_legend.pdf')

@@ -21,5 +21,5 @@ def mark_tiger_image(image, model):
 def poison_data_with_trigger(image, dataset_name):
     model = 'L' if 'mnist' in dataset_name else 'RGB'
     image = mark_tiger_image(image, model)
-    # save_image(image=image, save_path=f"./imgs/trigger_{dataset_name}.png", mode=model)
+    save_image(image=image, save_path=f"../result/poisoned_imgs/trigger_{dataset_name}.png", mode=model)
     return image, 0
