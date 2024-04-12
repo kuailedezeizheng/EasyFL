@@ -4,6 +4,8 @@ from collections import Counter
 import hdbscan
 import torch
 
+from decorators.timing import record_time
+
 
 def vectorize_net(model_weight):
     vectorized_weight = []
@@ -87,6 +89,7 @@ def flame_module(model_list, global_model, device):
     return global_model
 
 
+@record_time
 def flame(model_weights_list, global_model_weights, root_train_dataset, device, args):
     tmp_weights = flame_module(model_list=model_weights_list, global_model=global_model_weights, device=device)
     return tmp_weights

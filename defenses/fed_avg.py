@@ -1,7 +1,10 @@
 import copy
 import torch
 
+from decorators.timing import record_time
 
+
+@record_time
 def federated_averaging(model_weights_list, global_model_weights, root_train_dataset, device, args):
     eta = 5
     n = 100

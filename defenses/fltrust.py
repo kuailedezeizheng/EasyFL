@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from datasets.dataset import UserDataset
+from decorators.timing import record_time
 from models.cnn import CNNCifar10, CNNMnist
 from models.emnistcnn import EmnistCNN
 from models.fashioncnn import FashionCNN
@@ -51,6 +52,7 @@ def vectorize_net(model_weight):
     return vectorized_tensor
 
 
+@record_time
 def fltrust(model_weights_list, global_model_weights, root_train_dataset, device, args):
     # 创建根模型
     root_model = get_root_model(model_name=args['model'], dataset_name=args['dataset'])

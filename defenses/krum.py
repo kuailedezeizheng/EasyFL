@@ -3,7 +3,10 @@ import logging
 
 import torch
 
+from decorators.timing import record_time
 
+
+@record_time
 def krum(model_weights_list, global_model_weights, root_train_dataset, device, args):
     """Aggregate weight updates from the clients using multi-krum."""
     flatten_models_weights = flatten_weights(model_weights_list)
