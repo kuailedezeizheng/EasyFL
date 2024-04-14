@@ -30,6 +30,10 @@ def poison_data_with_trigger(image, dataset_name):
         mode = 'RGB'
         image = mark_tiger_image(image, mode)
         # save_image(image=image, save_path=f"./result/poisoned_imgs/trigger_{dataset_name}.png", mode=mode)
+    elif 'imagenet' in dataset_name:
+        mode = 'RGB'
+        image = mark_tiger_image(image, mode)
+        # save_image(image=image, save_path=f"./result/poisoned_imgs/trigger_{dataset_name}.png", mode=mode)
     else:
         raise ValueError(f"expected mnist or cifar, got {dataset_name}")
     return image, 0

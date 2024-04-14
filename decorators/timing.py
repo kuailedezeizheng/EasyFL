@@ -19,7 +19,7 @@ def record_time(func):
     def average_time():
         first_key = list(times_cache.keys())[0]
         timestamp = add_timestamp()
-        with open(f'./result/time/average_{first_key}_execution_time_{timestamp}.csv', 'w', newline='') as csvfile:
+        with open(f'./result/time/average:{first_key}execution_time:{timestamp}.csv', 'w', newline='') as csvfile:
             fieldnames = ['Function', 'Average Time', 'Total Calls']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()

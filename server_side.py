@@ -6,10 +6,10 @@ import torch
 from torch.utils.data import DataLoader, Subset
 from tqdm import trange
 
-from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader
+from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader, \
+    TinyImageNetLoader
 from datasets.dataset import UserDataset, PoisonDataset
 from datasets.get_data_subsets import get_data_subsets
-from decorators.timing import record_time
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
 from defenses.flame_median import flame_median
@@ -21,14 +21,11 @@ from defenses.small_flame import small_flame
 from defenses.small_fltrust import small_fltrust
 from defenses.trimmed_mean import trimmed_mean
 from defenses.trust_median import trust_median
-from models.cnn import CNNMnist, CNNCifar10
-from models.emnistcnn import EmnistCNN
-from models.fashioncnn import FashionCNN
-from models.lenet import LeNet
-from models.lenet_emnist import EmnistLeNet
+from models.cnn import CNN, Cifar10CNN, EmnistCNN, FashionCNN
+from models.lenet import LeNet, EmnistLeNet
 from models.mobilenetv2 import MobileNetV2
-from models.resnet import resnet18
-from models.vgg import VGG13, VGG16
+from models.resnet import resnet18, tiny_imagenet_resnet18
+from models.vgg import VGG13, Cifar100NetVGG16, TinyImageNetVGG16
 from test import fl_test
 from tools.plot_experimental_results import initialize_summary_writer, plot_line_chart
 from tools.timetamp import add_timestamp
@@ -43,7 +40,8 @@ def load_dataset(args):
         "cifar10": CIFAR10Loader,
         "cifar100": CIFAR100Loader,
         "fashion_mnist": FashionMNISTLoader,
-        "emnist": EMNISTLoader
+        "emnist": EMNISTLoader,
+        "tiny_imagenet": TinyImageNetLoader
     }
     if dataset_name in loaders:
         loader = loaders[dataset_name]()
@@ -55,17 +53,19 @@ def load_dataset(args):
 def build_model(model_type, dataset_type, device):
     """Build a global model for training."""
     model_map = {
-        ('cnn', 'mnist'): CNNMnist,
+        ('cnn', 'mnist'): CNN,
         ('lenet', 'mnist'): LeNet,
         ('lenet', 'emnist'): EmnistLeNet,
         ('cnn', 'emnist'): EmnistCNN,
         ('lenet', 'fashion_mnist'): LeNet,
         ('cnn', 'fashion_mnist'): FashionCNN,
-        ('cnn', 'cifar10'): CNNCifar10,
+        ('cnn', 'cifar10'): Cifar10CNN,
         ('mobilenet', 'cifar10'): MobileNetV2,
         ('vgg13', 'cifar10'): VGG13,
         ('resnet18', 'cifar100'): resnet18,
-        ('vgg16', 'cifar100'): VGG16,
+        ('vgg16', 'cifar100'): Cifar100NetVGG16,
+        ('resnet18', 'tiny_imagenet'): tiny_imagenet_resnet18,
+        ('vgg16', 'tiny_imagenet'): TinyImageNetVGG16,
     }
 
     key = (model_type, dataset_type)
@@ -93,13 +93,8 @@ def get_train_data_subsets(args, train_dataset):
     return train_data_subsets
 
 
-
-def compute_aggregate(
-        args,
-        all_user_model_weight_list,
-        global_weight,
-        root_train_dateset,
-        device):
+def get_aggregate_function(
+        args):
     """Define the aggregate function for training."""
     aggregate_functions = {
         'fed_avg': federated_averaging,
@@ -120,25 +115,17 @@ def compute_aggregate(
         raise SystemExit("Error: unrecognized aggregate function!")
 
     func = aggregate_functions[aggregate_function]
-    temp_weight = func(model_weights_list=all_user_model_weight_list,
-                       global_model_weights=global_weight,
-                       root_train_dataset=root_train_dateset,
-                       device=device,
-                       args=args)
-
-    return temp_weight
+    return func
 
 
 def federated_learning_train(
         args,
         train_data_subsets,
-        device,
         model,
         global_weight,
         chosen_malicious_user_list,
         chosen_normal_user_list,
         all_user_model_weight_list,
-        root_train_dateset=None,
         epoch=None):
     # 设置总的损失值为0
     sum_loss = 0
@@ -177,18 +164,9 @@ def federated_learning_train(
         sum_loss += user_loss
 
     loss_avg = sum_loss / len(chosen_normal_user_list)
-
-    # 聚合模型
-    temp_weight = compute_aggregate(
-        args,
-        all_user_model_weight_list,
-        global_weight,
-        root_train_dateset,
-        device)
-
     # 销毁用户侧对象
     del client_device
-    return temp_weight, loss_avg
+    return all_user_model_weight_list, loss_avg
 
 
 def get_log_path(args):
@@ -290,7 +268,8 @@ def federated_learning(args):
     result_ma = []
     result_ba = []
     result_loss = []
-
+    # 设置聚合算法
+    aggregate_function = get_aggregate_function(args=args)
     # 开始模拟联邦学习
     for epoch in trange(args['epochs'], desc="Federated Learning Training", unit="epoch", bar_format=bar_style):
         # 准备每轮记录用户提交模型的模型列表
@@ -300,22 +279,23 @@ def federated_learning(args):
         chosen_normal_user_list = np.random.choice(range(args['num_users']), normal_users_number, replace=False)
 
         # 开始模拟联邦学习的训练
-        temp_weight, loss_avg = federated_learning_train(args=args,
-                                                         train_data_subsets=train_data_subsets,
-                                                         device=device,
-                                                         model=net_model,
-                                                         global_weight=global_model_weight,
-                                                         chosen_malicious_user_list=chosen_malicious_user_list,
-                                                         chosen_normal_user_list=chosen_normal_user_list,
-                                                         all_user_model_weight_list=user_model_weight_list,
-                                                         root_train_dateset=root_train_dataset,
-                                                         epoch=epoch)
+        user_model_weights, loss_avg = federated_learning_train(args=args,
+                                                                train_data_subsets=train_data_subsets,
+                                                                model=net_model,
+                                                                global_weight=global_model_weight,
+                                                                chosen_malicious_user_list=chosen_malicious_user_list,
+                                                                chosen_normal_user_list=chosen_normal_user_list,
+                                                                all_user_model_weight_list=user_model_weight_list,
+                                                                epoch=epoch)
 
-        global_model_weight = copy.deepcopy(temp_weight)
-
+        global_model_weight = aggregate_function(model_weights_list=user_model_weights,
+                                                 global_model_weights=global_model_weight,
+                                                 root_train_dataset=root_train_dataset,
+                                                 device=device,
+                                                 args=args)
         # Calculation accuracy
         ma, ba = fl_test(model=net_model,
-                         temp_weight=temp_weight,
+                         temp_weight=global_model_weight,
                          test_dataset=test_dataset,
                          poisonous_dataset_test=poisonous_test_dataset,
                          device=device,
@@ -334,5 +314,5 @@ def federated_learning(args):
     write_to_csv([result_ma, result_ba, result_loss], get_csv_path(args))
     # 关闭SummaryWriter
     writer.close()
-    # 输出聚合算法的平均聚合时间
-    compute_aggregate.average_time()
+    # 保存聚合平均时间
+    aggregate_function.average_time()

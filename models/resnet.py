@@ -3,10 +3,11 @@ import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 from models.model import Model
 
-__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
+__all__ = ['ResNet', 'resnet18', 'tiny_imagenet_resnet18', 'resnet34', 'tiny_imagenet_resnet34',
+           'resnet50', 'tiny_imagenet_resnet50',
+           'resnet101', 'tiny_imagenet_resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_resnet50_2', 'wide_resnet101_2']
-
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -122,7 +123,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(Model):
 
-    def __init__(self, block, layers, num_classes=1000,
+    def __init__(self, block, layers, num_classes=100,
                  zero_init_residual=False,
                  groups=1, width_per_group=64,
                  replace_stride_with_dilation=None,
@@ -247,6 +248,11 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
+def tiny_imagenet_resnet(block, layers, num_classes=200):
+    model = ResNet(block=block, layers=layers, num_classes=num_classes)
+    return model
+
+
 def resnet18(pretrained=False, progress=True, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition"
@@ -258,6 +264,10 @@ def resnet18(pretrained=False, progress=True, **kwargs):
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
+
+
+def tiny_imagenet_resnet18():
+    return tiny_imagenet_resnet(block=BasicBlock, layers=[2, 2, 2, 2])
 
 
 def resnet34(pretrained=False, progress=True, **kwargs):
@@ -272,6 +282,10 @@ def resnet34(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
+def tiny_imagenet_resnet34():
+    return tiny_imagenet_resnet(block=BasicBlock, layers=[3, 4, 6, 3])
+
+
 def resnet50(pretrained=False, progress=True, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
@@ -284,6 +298,10 @@ def resnet50(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
+def tiny_imagenet_resnet50():
+    return tiny_imagenet_resnet(block=BasicBlock, layers=[3, 4, 6, 3])
+
+
 def resnet101(pretrained=False, progress=True, **kwargs):
     r"""ResNet-101 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
@@ -294,6 +312,10 @@ def resnet101(pretrained=False, progress=True, **kwargs):
     """
     return _resnet('resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
                    **kwargs)
+
+
+def tiny_imagenet_resnet101():
+    return tiny_imagenet_resnet(block=BasicBlock, layers=[3, 4, 23, 3])
 
 
 def resnet152(pretrained=False, progress=True, **kwargs):

@@ -75,3 +75,13 @@ class MobileNetV2(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+
+class Cifar100MobileNetV2(MobileNetV2):
+    def __init__(self):
+        super(Cifar100MobileNetV2, self).__init__(num_classes=100)
+
+
+class TinyImageNetMobileNetV2(MobileNetV2):
+    def __init__(self):
+        super(TinyImageNetMobileNetV2, self).__init__(num_classes=200)

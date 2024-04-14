@@ -27,8 +27,15 @@ def edge_detection(
 
 
 def blended_two_images(image, dataset_name):
-    blended_image_path = "./attacks/imgs/hellokit32.jpeg" if dataset_name in {
-        'cifar10', 'cifar100'} else "./attacks/imgs/hellokit28.jpeg"
+    if 'cifar' in dataset_name:
+        blended_image_path = "./attacks/imgs/hellokit32.jpeg"
+    elif 'imagenet' in dataset_name:
+        blended_image_path = "./attacks/imgs/hellokit32.jpeg"
+    elif 'mnist' in dataset_name:
+        blended_image_path = "./attacks/imgs/hellokit28.jpeg"
+    else:
+        raise Exception("Dataset not supported!")
+
     blended_image = Image.open(blended_image_path)
 
     # 将PIL图像转换为torch张量
@@ -60,7 +67,7 @@ def poison_data_with_blended(image, dataset_name):
     return poisonous_image, label
 
 
-def resize_image(input_image_path, output_image_path, new_width):
+def resize_image(input_image_path, output_image_path, new_width, enhancement_factor=15):
     """将图像缩小到指定的宽度，并保持纵横比"""
     img = Image.open(input_image_path)
     width_percent = (new_width / float(img.size[0]))
@@ -68,7 +75,7 @@ def resize_image(input_image_path, output_image_path, new_width):
     resized_img = img.resize((new_width, new_height), resample=Image.LANCZOS)
     # 增加对比度
     contrast = ImageEnhance.Contrast(resized_img)
-    contrasted_img = contrast.enhance(15)
+    contrasted_img = contrast.enhance(enhancement_factor)
 
     contrasted_img.save(output_image_path)
 
@@ -78,10 +85,15 @@ if __name__ == '__main__':
     edge_image_path = "./imgs/hellokit_edges.jpeg"
     output_image_28x28_path = "./imgs/hellokit28.jpeg"
     output_image_32x32_gary_path = "./imgs/hellokit32_gray.jpeg"
+    output_image_64x64_gary_path = "./imgs/hellokit64_gray.jpeg"
     output_image_32x32_path = "./imgs/hellokit32.jpeg"
+    output_image_64x64_path = "./imgs/hellokit64.jpeg"
 
     edge_detection(input_image_path, edge_image_path)
 
     resize_image(edge_image_path, output_image_28x28_path, 28)
     resize_image(edge_image_path, output_image_32x32_gary_path, 32)
+    resize_image(edge_image_path, output_image_64x64_gary_path, 64, 8)
+
     gray_to_rgb(output_image_32x32_gary_path, output_image_32x32_path)
+    gray_to_rgb(output_image_64x64_gary_path, output_image_64x64_path)

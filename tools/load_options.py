@@ -12,8 +12,9 @@ lab_configs = {
     "(CIFAR-10, VGG13)": 'configs/cifar10_vgg13_lab_config.toml',
     "(CIFAR-10, CIFAR10Cnn)": 'configs/cifar10_cnn_lab_config.toml',
     "(CIFAR-100, ResNet-18)": 'configs/cifar100_ResNet18_lab_config.toml',
-    "(CIFAR-100, VGG16)": 'configs/cifar100_vgg16_lab_config.toml',
-    "(CIFAR-100, CIFAR100Cnn)": 'configs/cifar100_cnn_lab_config.toml'
+    "(CIFAR-100, VGG16)": 'configs/cifar100_VGG16_lab_config.toml',
+    "(TinyIMAGENET, ResNet-18)": 'configs/tiny_imagenet_ResNet18_lab_config.toml',
+    "(TinyIMAGENET, VGG16)": 'configs/tiny_imagenet_VGG16_lab_config.toml',
 }
 
 

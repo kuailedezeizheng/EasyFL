@@ -1,10 +1,10 @@
-import torch.nn.functional as F
-from torch import nn
+from torch import nn as nn
+from torch.nn import functional as F
 
 
-class LeNet(nn.Module):
-    def __init__(self):
-        super(LeNet, self).__init__()
+class BaseLeNet(nn.Module):
+    def __init__(self, num_classes):
+        super(BaseLeNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 6, kernel_size=5, padding=2)
         self.relu1 = nn.ReLU()
         self.avgpool1 = nn.AvgPool2d(kernel_size=2, stride=2)
@@ -16,7 +16,7 @@ class LeNet(nn.Module):
         self.relu3 = nn.ReLU()
         self.linear2 = nn.Linear(120, 84)
         self.relu4 = nn.ReLU()
-        self.linear3 = nn.Linear(84, 10)
+        self.linear3 = nn.Linear(84, num_classes)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -33,3 +33,14 @@ class LeNet(nn.Module):
         x = self.linear3(x)
 
         return F.log_softmax(x, dim=1)
+
+
+class LeNet(BaseLeNet):
+    def __init__(self):
+        super(LeNet, self).__init__(num_classes=10)
+
+
+class EmnistLeNet(BaseLeNet):
+    def __init__(self):
+        super(EmnistLeNet, self).__init__(num_classes=27)
+

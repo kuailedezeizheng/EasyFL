@@ -1,42 +1,117 @@
-import torch.nn.functional as F
-from torch import nn
+import torch.nn as nn
 
 
-class CNNMnist(nn.Module):
-    def __init__(self):
-        super(CNNMnist, self).__init__()
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
+class BaseCNN(nn.Module):
+    def __init__(self, num_classes):
+        super(BaseCNN, self).__init__()
+        self.num_classes = num_classes
 
     def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(-1, x.shape[1] * x.shape[2] * x.shape[3])
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
+        raise NotImplementedError("forward method must be implemented in subclasses")
+
+
+class CNN(BaseCNN):
+    def __init__(self, num_classes=10):
+        super(CNN, self).__init__(num_classes)
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 10, kernel_size=5),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(10, 20, kernel_size=5),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(20 * 4 * 4, 50),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(50, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
         return x
 
 
-class CNNCifar10(nn.Module):
-    def __init__(self):
-        super(CNNCifar10, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.conv2_drop = nn.Dropout2d()  # 添加Dropout层
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+class EmnistCNN(BaseCNN):
+    def __init__(self, num_classes=27):
+        super(EmnistCNN, self).__init__(num_classes)
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 10, kernel_size=5),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(10, 20, kernel_size=5),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(20 * 4 * 4, 50),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(50, num_classes)
+        )
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2_drop(self.conv2(x))))
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+
+class Cifar10CNN(BaseCNN):
+    def __init__(self):
+        super(Cifar10CNN, self).__init__(num_classes=10)
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 6, 5),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(6, 16, 5),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(16 * 5 * 5, 120),
+            nn.ReLU(),
+            nn.Linear(120, 84),
+            nn.ReLU(),
+            nn.Linear(84, self.num_classes)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
         x = x.view(-1, 16 * 5 * 5)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = self.classifier(x)
         return x
+
+
+class FashionCNN(BaseCNN):
+
+    def __init__(self):
+        super(FashionCNN, self).__init__(num_classes=10)
+        self.features = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(in_features=64 * 7 * 7, out_features=600),
+            nn.ReLU(),
+            nn.Dropout(0.25),
+            nn.Linear(in_features=600, out_features=120),
+            nn.ReLU(),
+            nn.Linear(in_features=120, out_features=self.num_classes),
+            nn.Softmax(dim=1)
+        )
+
+    def forward(self, x):
+        out = self.features(x)
+        out = out.view(out.size(0), -1)
+        out = self.classifier(out)
+        return out

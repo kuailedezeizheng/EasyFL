@@ -5,31 +5,30 @@ from torch.utils.data import DataLoader
 
 from datasets.dataset import UserDataset
 from decorators.timing import record_time
-from models.cnn import CNNCifar10, CNNMnist
-from models.emnistcnn import EmnistCNN
-from models.fashioncnn import FashionCNN
-from models.lenet import LeNet
-from models.lenet_emnist import EmnistLeNet
+from models.cnn import Cifar10CNN, CNN, EmnistCNN, FashionCNN
+from models.lenet import LeNet, EmnistLeNet
 from models.mobilenetv2 import MobileNetV2
-from models.resnet import resnet18
-from models.vgg import VGG13, VGG16
+from models.resnet import resnet18, tiny_imagenet_resnet18
+from models.vgg import VGG13, Cifar100NetVGG16, TinyImageNetVGG16
 from user_side import UserSide
 
 
 def get_root_model(model_name, dataset_name):
     """Build a global model for training."""
     model_map = {
-        ('cnn', 'mnist'): CNNMnist,
+        ('cnn', 'mnist'): CNN,
         ('lenet', 'mnist'): LeNet,
         ('lenet', 'emnist'): EmnistLeNet,
         ('cnn', 'emnist'): EmnistCNN,
         ('lenet', 'fashion_mnist'): LeNet,
         ('cnn', 'fashion_mnist'): FashionCNN,
-        ('cnn', 'cifar10'): CNNCifar10,
+        ('cnn', 'cifar10'): Cifar10CNN,
         ('mobilenet', 'cifar10'): MobileNetV2,
         ('vgg13', 'cifar10'): VGG13,
         ('resnet18', 'cifar100'): resnet18,
-        ('vgg16', 'cifar100'): VGG16,
+        ('vgg16', 'cifar100'): Cifar100NetVGG16,
+        ('resnet18', 'tiny_imagenet'): tiny_imagenet_resnet18,
+        ('vgg16', 'tiny_imagenet'): TinyImageNetVGG16,
     }
 
     key = (model_name, dataset_name)

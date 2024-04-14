@@ -95,8 +95,9 @@ def load_experiment_config(dataset):
         '8': "(CIFAR-10, CIFAR10Cnn)",
         '9': "(CIFAR-10, VGG13)",
         '10': "(CIFAR-100, ResNet-18)",
-        '11': "(CIFAR-100, CIFAR10Cnn)",
-        '12': "(CIFAR-100, VGG16)",
+        '11': "(CIFAR-100, VGG16)",
+        '12': "(TinyIMAGENET, ResNet-18)",
+        '13': "(TinyIMAGENET, VGG16)"
     }
     lab_name = lab_name_map.get(dataset)
     if lab_name is None:
@@ -105,15 +106,15 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    for i in range(1, 13):
+    for i in range(12, 14):
         lab_config = load_experiment_config(str(i))
         lab_config['server'] = False
-        lab_config['epochs'] = 500
-
+        lab_config['epochs'] = 1
+        lab_config['frac'] = 0.02
         mr = [0.2]
         attack_list = ['trigger', 'semantic', 'blended', 'sig']
         defence_list = [['fed_avg'], ['flame'], ['fltrust'], ['krum'], ['multikrum'],
                    ['median'], ['trimmed_mean'],
                    ['small_flame'], ['small_fltrust']]
-        for defence in defence_list:
+        for defence in defence_list[3: 5]:
             run_mult_FL(config=lab_config, attacks=attack_list, defences=defence, malicious_rates=mr)

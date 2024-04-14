@@ -54,3 +54,51 @@ class VGG16(VGG):
 class VGG19(VGG):
     def __init__(self):
         super(VGG19, self).__init__('VGG19')
+
+
+class TinyImageNetVGG11(VGG):
+    def __init__(self):
+        super(TinyImageNetVGG11, self).__init__('VGG11')
+        self.classifier = nn.Linear(512, 200)
+
+
+class TinyImageNetVGG13(VGG):
+    def __init__(self):
+        super(TinyImageNetVGG13, self).__init__('VGG13')
+        self.classifier = nn.Linear(512, 200)
+
+
+class TinyImageNetVGG16(VGG):
+    def __init__(self):
+        super(TinyImageNetVGG16, self).__init__('VGG16')
+        self.classifier = nn.Linear(512, 200)
+
+
+class TinyImageNetVGG19(VGG):
+    def __init__(self):
+        super(TinyImageNetVGG19, self).__init__('VGG19')
+        self.classifier = nn.Linear(512, 200)
+
+
+class Cifar100NetVGG11(VGG):
+    def __init__(self):
+        super(Cifar100NetVGG11, self).__init__('VGG11')
+        self.classifier = nn.Linear(512, 100)
+
+
+class Cifar100NetVGG13(VGG):
+    def __init__(self):
+        super(Cifar100NetVGG13, self).__init__('VGG13')
+        self.classifier = nn.Linear(512, 100)
+
+
+class Cifar100NetVGG16(VGG):
+    def __init__(self):
+        super(Cifar100NetVGG16, self).__init__('VGG16')
+        self.classifier = nn.Linear(512, 100)
+
+
+class Cifar100NetVGG19(VGG):
+    def __init__(self):
+        super(Cifar100NetVGG19, self).__init__('VGG19')
+        self.classifier = nn.Linear(512, 100)

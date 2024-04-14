@@ -1,3 +1,5 @@
+import os
+
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torchvision.datasets import EMNIST, FashionMNIST
@@ -119,4 +121,17 @@ class FashionMNISTLoader(DatasetLoader):
             train=False,
             transform=transform
         )
+        return train_dataset, test_dataset
+
+
+class TinyImageNetLoader(DatasetLoader):
+    def load_dataset(self):
+        data_dir = 'data/tiny-imagenet-200'
+        normalize = transforms.Normalize((0.4802, 0.4481, 0.3975), (0.2770, 0.2691, 0.2821))
+        transform_train = transforms.Compose(
+            [transforms.RandomResizedCrop(32), transforms.RandomHorizontalFlip(), transforms.ToTensor(),
+             normalize, ])
+        transform_test = transforms.Compose([transforms.Resize(32), transforms.ToTensor(), normalize, ])
+        train_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'), transform=transform_train)
+        test_dataset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'), transform=transform_test)
         return train_dataset, test_dataset
