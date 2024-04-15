@@ -5,7 +5,7 @@ import time
 
 import psutil
 
-from server_side import federated_learning
+from federated_learning import FederatedLearning
 from tools.load_options import load_config
 
 
@@ -34,7 +34,10 @@ def calculate_gpu_memory_utilization():
 def worker(num, config):
     """每个进程将执行的函数"""
     print(f"进程 {num} 正在运行，进程ID为 {os.getpid()}")
-    federated_learning(config)
+    federated_learning = FederatedLearning(args=config)
+    federated_learning.train()
+    federated_learning.test()
+    federated_learning.save_result()
     print(f"进程 {num} 执行完毕")
 
 
@@ -57,8 +60,8 @@ def run_mult_FL(config, attacks, defences, malicious_rates):
                 config['malicious_user_rate'] = m_ratio
                 gpu_utilization = calculate_gpu_memory_utilization()
                 cpu_usage = psutil.cpu_percent(interval=None)
-                print(f"当前GPU使用率：{gpu_utilization * 100}%")
-                print(f"当前CPU使用率：{cpu_usage}%")
+                print(f"当前GPU使用率：{gpu_utilization * 100:.2f}%")
+                print(f"当前CPU使用率：{cpu_usage:.2f}%")
                 if gpu_utilization > 0.90:
                     condition = False
                     print("stop!" + attack + defence + str(m_ratio))
@@ -106,15 +109,17 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    for i in range(12, 14):
+    for i in range(3, 5):
         lab_config = load_experiment_config(str(i))
         lab_config['server'] = False
-        lab_config['epochs'] = 1
         lab_config['frac'] = 0.02
+        lab_config['epochs'] = 100
+        lab_config['epoch_threshold'] = 2
+        lab_config['verbose'] = False
         mr = [0.2]
         attack_list = ['trigger', 'semantic', 'blended', 'sig']
         defence_list = [['fed_avg'], ['flame'], ['fltrust'], ['krum'], ['multikrum'],
-                   ['median'], ['trimmed_mean'],
-                   ['small_flame'], ['small_fltrust']]
-        for defence in defence_list[3: 5]:
+                        ['median'], ['trimmed_mean'],
+                        ['small_flame'], ['small_fltrust']]
+        for defence in defence_list[:1]:
             run_mult_FL(config=lab_config, attacks=attack_list, defences=defence, malicious_rates=mr)

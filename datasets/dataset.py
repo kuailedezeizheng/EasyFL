@@ -11,7 +11,7 @@ from attacks.sig_attack import poison_data_with_sig
 from attacks.trigger_attack import poison_data_with_trigger
 
 
-def create_specific_label_dataset(dataset):
+def create_semantic_dataset(dataset):
     label_5_test_data = []
     label_5_test_labels = []
     for sample in dataset:
@@ -24,13 +24,13 @@ def create_specific_label_dataset(dataset):
     label_5_test_labels = torch.tensor(label_5_test_labels)
 
     # 创建一个与 test_dataset 类似的变量来存储标签为 5 的数据
-    dataset = torch.utils.data.TensorDataset(label_5_test_data, label_5_test_labels)
-    return dataset
+    semantic_dataset = torch.utils.data.TensorDataset(label_5_test_data, label_5_test_labels)
+    return semantic_dataset
 
 
 def get_dataset(attack_function, dataset):
     if attack_function == 'semantic':
-        dataset = create_specific_label_dataset(dataset=dataset)
+        dataset = create_semantic_dataset(dataset=dataset)
     return dataset
 
 
@@ -48,7 +48,7 @@ def get_attack_function(attack_function):
     return poison_function
 
 
-class PoisonDataSet(Dataset):
+class PoisonTestDataSet(Dataset):
     def __init__(self, dataset, dataset_name, attack_function):
         self.dataset = get_dataset(attack_function=attack_function, dataset=dataset)
         self.dataset_name = dataset_name

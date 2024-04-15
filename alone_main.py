@@ -1,4 +1,4 @@
-from server_side import federated_learning
+from federated_learning import FederatedLearning
 from tools.load_options import load_config
 
 
@@ -26,14 +26,22 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    lab_config = load_experiment_config(str(6))
+    lab_config = load_experiment_config(str(3))
+    if lab_config is None:
+        raise SystemExit("实验配置错误")
+
     attack_list = ['trigger', 'semantic', 'blended', 'sig']
     defence_list = ['fed_avg',
                     'flame', 'fltrust',
                     'krum', 'multikrum',
                     'median', 'trimmed_mean']
     lab_config['attack_method'] = attack_list[1]
-    lab_config['frac'] = 0.02
+    lab_config['frac'] = 0.15
     lab_config['epochs'] = 100
+    lab_config['epoch_threshold'] = 2
     lab_config['aggregate_function'] = defence_list[0]
-    federated_learning(lab_config)
+
+    federated_learning = FederatedLearning(args=lab_config)
+    federated_learning.train()
+    federated_learning.test()
+    federated_learning.save_result()

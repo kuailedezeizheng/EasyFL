@@ -29,3 +29,4 @@ malicious_user_rate = 0 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
 attack_method = "sig" # trigger, semantic, blended or sig
 server = false
+epoch_threshold = 50
