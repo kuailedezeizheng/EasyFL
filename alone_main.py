@@ -34,6 +34,6 @@ if __name__ == '__main__':
                     'median', 'trimmed_mean']
     lab_config['attack_method'] = attack_list[1]
     lab_config['frac'] = 0.02
-    lab_config['epochs'] = 20
+    lab_config['epochs'] = 100
     lab_config['aggregate_function'] = defence_list[0]
     federated_learning(lab_config)

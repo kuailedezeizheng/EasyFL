@@ -28,23 +28,31 @@ def create_specific_label_dataset(dataset):
     return dataset
 
 
-class PoisonDataset(Dataset):
+def get_dataset(attack_function, dataset):
+    if attack_function == 'semantic':
+        dataset = create_specific_label_dataset(dataset=dataset)
+    return dataset
+
+
+def get_attack_function(attack_function):
+    if attack_function == 'trigger':
+        poison_function = poison_data_with_trigger
+    elif attack_function == 'semantic':
+        poison_function = poison_data_with_semantic
+    elif attack_function == 'blended':
+        poison_function = poison_data_with_blended
+    elif attack_function == 'sig':
+        poison_function = poison_data_with_sig
+    else:
+        raise SystemExit("No gain attack function")
+    return poison_function
+
+
+class PoisonDataSet(Dataset):
     def __init__(self, dataset, dataset_name, attack_function):
-        if attack_function == 'semantic':
-            self.dataset = create_specific_label_dataset(dataset)
-        else:
-            self.dataset = dataset
-        if attack_function == 'trigger':
-            self.poison_function = poison_data_with_trigger
-        elif attack_function == 'semantic':
-            self.poison_function = poison_data_with_semantic
-        elif attack_function == 'blended':
-            self.poison_function = poison_data_with_blended
-        elif attack_function == 'sig':
-            self.poison_function = poison_data_with_sig
-        else:
-            raise SystemExit("No gain attack function")
+        self.dataset = get_dataset(attack_function=attack_function, dataset=dataset)
         self.dataset_name = dataset_name
+        self.poison_function = get_attack_function(attack_function)
 
     def __len__(self):
         # 返回一个用户被分配的数据总长度
@@ -54,7 +62,25 @@ class PoisonDataset(Dataset):
         # 根据索引返回对应的数据和标签
         data_sample = self.dataset[idx]
         image, label = data_sample
-        poison_image, poison_label = self.poison_function(image=image, dataset_name=self.dataset_name)
+        poison_image, poison_label = self.poison_function(image=image, label=label, dataset_name=self.dataset_name)
+        return poison_image, poison_label
+
+
+class PoisonTrainDataset(Dataset):
+    def __init__(self, dataset, dataset_name, attack_function):
+        self.dataset = dataset
+        self.dataset_name = dataset_name
+        self.poison_function = get_attack_function(attack_function)
+
+    def __len__(self):
+        # 返回一个用户被分配的数据总长度
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        # 根据索引返回对应的数据和标签
+        data_sample = self.dataset[idx]
+        image, label = data_sample
+        poison_image, poison_label = self.poison_function(image=image, label=label, dataset_name=self.dataset_name)
         return poison_image, poison_label
 
 

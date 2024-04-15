@@ -21,7 +21,7 @@ def mark_tiger_image(image, mode):
     return image
 
 
-def poison_data_with_trigger(image, dataset_name):
+def poison_data_with_trigger(image, label, dataset_name):
     if 'mnist' in dataset_name:
         mode = 'L'
         image = mark_tiger_image(image, mode)

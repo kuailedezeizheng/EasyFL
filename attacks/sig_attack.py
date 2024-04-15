@@ -38,7 +38,7 @@ def generate_sig_sign(image):
     return sig_image
 
 
-def poison_data_with_sig(image, dataset_name):
+def poison_data_with_sig(image, label, dataset_name):
     image, label = load_sig_sign(image)
     # model = 'L' if 'mnist' in dataset_name else 'RGB'
     # save_image(image=image, save_path=f"./result/poisoned_imgs/sig_{dataset_name}.png", mode=model)

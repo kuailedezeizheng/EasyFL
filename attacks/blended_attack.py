@@ -61,7 +61,7 @@ def gray_to_rgb(input_path, output_path):
     cv2.imwrite(output_path, rgb_image)
 
 
-def poison_data_with_blended(image, dataset_name):
+def poison_data_with_blended(image, label, dataset_name):
     poisonous_image = blended_two_images(image, dataset_name)
     label = 6
     return poisonous_image, label

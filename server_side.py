@@ -8,7 +8,7 @@ from tqdm import trange
 
 from datasets.DatasetLoader import MNISTLoader, CIFAR10Loader, CIFAR100Loader, FashionMNISTLoader, EMNISTLoader, \
     TinyImageNetLoader
-from datasets.dataset import UserDataset, PoisonDataset
+from datasets.dataset import UserDataset, PoisonTrainDataset, PoisonDataSet
 from datasets.get_data_subsets import get_data_subsets
 from defenses.fed_avg import federated_averaging
 from defenses.flame import flame
@@ -143,8 +143,8 @@ def federated_learning_train(
                     print(f"user {chosen_user_id} is normal user")
 
             else:  # 否则就是恶意用户
-                client_dataset = PoisonDataset(train_data_subsets[chosen_user_id], args["dataset"],
-                                               args["attack_method"])
+                client_dataset = PoisonTrainDataset(train_data_subsets[chosen_user_id], args["dataset"],
+                                                    args["attack_method"])
                 if args['verbose']:
                     print(f"user {chosen_user_id} is malicious user")
 
@@ -227,7 +227,7 @@ def federated_learning(args):
 
     # build poisonous dataset
     test_dataset_copy = copy.deepcopy(test_dataset)
-    poisonous_test_dataset = PoisonDataset(
+    poisonous_test_dataset = PoisonDataSet(
         dataset=test_dataset_copy,
         dataset_name=args['dataset'],
         attack_function=args['attack_method'])
@@ -235,8 +235,7 @@ def federated_learning(args):
     if args['verbose']:
         print("Malicious data generated successfully.")
 
-    train_data_subsets = get_train_data_subsets(
-        args=args, train_dataset=train_dataset)
+    train_data_subsets = get_train_data_subsets(args=args, train_dataset=train_dataset)
 
     root_train_dataset = []
     if args['aggregate_function'] in ['fltrust', 'small_fltrust', 'rc_median']:
