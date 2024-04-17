@@ -3,16 +3,22 @@ from torch import nn, optim
 
 
 class UserSide(object):
-    def __init__(self, model, model_weight, train_dataset_loader, args):
+    def __init__(self, model, verbose, device):
         self.model = model
+        self.device = device
+        self.verbose = verbose
+        self.train_dataset_loader = None
+        self.num_epochs = None
+        self.learning_rate = None
+        self.batch_size = None
+
+    def reinitialize(self, model_weight, train_dataset_loader, local_ep, lr, batch_size):
         self.model.load_state_dict(model_weight)
-        self.device = torch.device("cuda" if args['gpu'] and torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         self.train_dataset_loader = train_dataset_loader
-        self.verbose = args['verbose']
-        self.num_epochs = args['local_ep']
-        self.learning_rate = args['lr']
-        self.batch_size = args['local_bs']
+        self.num_epochs = local_ep
+        self.learning_rate = lr
+        self.batch_size = batch_size
 
     def train(self):
         criterion = nn.CrossEntropyLoss()
@@ -20,6 +26,8 @@ class UserSide(object):
 
         total_loss = 0
         num_batches = len(self.train_dataset_loader)
+        if num_batches == 0:
+            raise ValueError("num_batches can not eq zero!")
 
         for epoch in range(self.num_epochs):
             epoch_loss = 0

@@ -7,7 +7,7 @@ from decorators.timing import record_time
 
 
 @record_time
-def trimmed_mean(model_weights_list, global_model_weights, root_train_dataset, device, args):
+def trimmed_mean(model_weights_list, global_model_weights, device):
     """Aggregate weight updates from the clients using trimmed-mean."""
     flattened_weights = flatten_weights(model_weights_list)
     num_attackers = 0  # ?

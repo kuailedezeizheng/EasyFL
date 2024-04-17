@@ -25,7 +25,7 @@ def euclidean_distance(x, y):
 
 
 @record_time
-def multikrum(model_weights_list, global_model_weights, root_train_dataset, device, args):
+def multikrum(model_weights_list, global_model_weights, device):
     num_models = len(model_weights_list)
     dist_matrix = torch.zeros(num_models, num_models)
     num_attackers = 10

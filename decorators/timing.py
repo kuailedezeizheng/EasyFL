@@ -13,7 +13,7 @@ def record_time(func):
         end_time = time.time()
         execution_time = end_time - start_time
         times_cache.setdefault(func.__name__, []).append(execution_time)
-        print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds.")
+        print(f"\nFunction '{func.__name__}' executed in {execution_time:.4f} seconds.")
         return result
 
     def average_time():

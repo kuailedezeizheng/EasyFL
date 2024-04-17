@@ -5,7 +5,7 @@ from decorators.timing import record_time
 
 
 @record_time
-def federated_averaging(model_weights_list, global_model_weights, root_train_dataset, device, args):
+def federated_averaging(model_weights_list, global_model_weights, device):
     eta = 5
     n = 100
     w_avg = copy.deepcopy(model_weights_list[0])

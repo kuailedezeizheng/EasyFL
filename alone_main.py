@@ -26,7 +26,7 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    lab_config = load_experiment_config(str(3))
+    lab_config = load_experiment_config(str(12))
     if lab_config is None:
         raise SystemExit("实验配置错误")
 
@@ -36,8 +36,9 @@ if __name__ == '__main__':
                     'krum', 'multikrum',
                     'median', 'trimmed_mean']
     lab_config['attack_method'] = attack_list[1]
+    lab_config['verbose'] = False
     lab_config['frac'] = 0.15
-    lab_config['epochs'] = 100
+    lab_config['epochs'] = 10
     lab_config['epoch_threshold'] = 2
     lab_config['aggregate_function'] = defence_list[0]
 

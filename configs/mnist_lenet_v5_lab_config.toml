@@ -5,7 +5,7 @@ num_users = 100      # int: number of users: K
 all_clients = false   # bool: aggregation over all clients true or false
 # server train
 epochs = 1000          # int: rounds of training
-bs = 1024             # int: test batch size
+bs = 512             # int: test batch size
 frac = 0.15           # float: the fraction of clients: C
 gpu = true              # int: gpu device
 verbose = true       # bool: verbose print
@@ -15,8 +15,8 @@ model = "lenet"        # str: model name mobilenet, resnet18, lenet
 lr = 0.001            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
 local_bs = 512        # int: local batch size: 10
-momentum = 0.9       # float: SGD momentum (default: 0.5)
-weight_decay = 1e-4  # float: SGD weight_decay
+# posion client train
+poison_ep = 1
 # data configuration
 dataset = "mnist"    # str: name of dataset cifar10, cifar100 or mnist
 iid = false          # bool: whether i.i.d or not

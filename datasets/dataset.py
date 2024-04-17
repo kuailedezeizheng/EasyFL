@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset, Subset, TensorDataset
 
 from attacks.blended_attack import poison_data_with_blended
 from attacks.semantic_attack import poison_data_with_semantic
@@ -12,20 +12,19 @@ from attacks.trigger_attack import poison_data_with_trigger
 
 
 def create_semantic_dataset(dataset):
-    label_5_test_data = []
-    label_5_test_labels = []
-    for sample in dataset:
-        if sample[1] == 5:  # 如果标签为 5
-            label_5_test_data.append(sample[0])  # 添加数据
-            label_5_test_labels.append(sample[1])  # 添加标签
+    label_5_indices = []
 
-    # 将数据堆叠成张量
-    label_5_test_data = torch.stack(label_5_test_data)
-    label_5_test_labels = torch.tensor(label_5_test_labels)
+    for idx in range(len(dataset)):
+        sample = dataset[idx]
+        label = sample[1]
 
-    # 创建一个与 test_dataset 类似的变量来存储标签为 5 的数据
-    semantic_dataset = torch.utils.data.TensorDataset(label_5_test_data, label_5_test_labels)
-    return semantic_dataset
+        # 如果标签为 5，则记录索引
+        if label == 5:
+            label_5_indices.append(idx)
+
+    # 使用记录的索引创建子集
+    semantic_subset = Subset(dataset, label_5_indices)
+    return semantic_subset
 
 
 def get_dataset(attack_function, dataset):

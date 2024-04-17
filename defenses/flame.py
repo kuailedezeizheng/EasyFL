@@ -15,8 +15,8 @@ def vectorize_net(model_weight):
     vectorized_tensor = torch.cat(vectorized_weight, dim=0)
     return vectorized_tensor
 
-
-def flame_module(model_list, global_model, device):
+@record_time
+def flame(model_list, global_model, device):
     pre_global_model = copy.deepcopy(global_model)
     # 将全局模型向量化
     pre_global_model_vectorized = vectorize_net(pre_global_model)
@@ -87,9 +87,3 @@ def flame_module(model_list, global_model, device):
         global_model[key] = layer_parameter + aggregator / num_most_common_clusters + gaussian_noise
 
     return global_model
-
-
-@record_time
-def flame(model_weights_list, global_model_weights, root_train_dataset, device, args):
-    tmp_weights = flame_module(model_list=model_weights_list, global_model=global_model_weights, device=device)
-    return tmp_weights

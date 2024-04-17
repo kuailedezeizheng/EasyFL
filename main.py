@@ -109,17 +109,16 @@ def load_experiment_config(dataset):
 
 
 if __name__ == '__main__':
-    for i in range(3, 5):
+    for i in range(3, 7):
+        if i == 5:
+            continue
         lab_config = load_experiment_config(str(i))
         lab_config['server'] = False
-        lab_config['frac'] = 0.02
-        lab_config['epochs'] = 100
-        lab_config['epoch_threshold'] = 2
-        lab_config['verbose'] = False
+        lab_config['frac'] = 0.15
+        lab_config['epochs'] = 1000
+        lab_config['epoch_threshold'] = 50
+        lab_config['verbose'] = True
         mr = [0.2]
         attack_list = ['trigger', 'semantic', 'blended', 'sig']
-        defence_list = [['fed_avg'], ['flame'], ['fltrust'], ['krum'], ['multikrum'],
-                        ['median'], ['trimmed_mean'],
-                        ['small_flame'], ['small_fltrust']]
-        for defence in defence_list[:1]:
-            run_mult_FL(config=lab_config, attacks=attack_list, defences=defence, malicious_rates=mr)
+        defence_list = ['fed_avg', 'flame', 'krum', 'multikrum', 'fltrust', 'median', 'trimmed_mean']
+        run_mult_FL(config=lab_config, attacks=attack_list[1:2], defences=defence_list, malicious_rates=mr)

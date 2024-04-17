@@ -24,15 +24,15 @@ def fl_test(
         test_dataset,
         poisonous_dataset_test,
         device,
-        args):
+        batch_size):
 
     test_loader = DataLoader(
         dataset=test_dataset,
-        batch_size=args['bs'],
+        batch_size=batch_size,
         shuffle=False)
     poisonous_dataset_test_loader = DataLoader(
         dataset=poisonous_dataset_test,
-        batch_size=args['bs'],
+        batch_size=batch_size,
         shuffle=False)
 
     model.load_state_dict(temp_weight)

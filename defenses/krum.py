@@ -7,7 +7,7 @@ from decorators.timing import record_time
 
 
 @record_time
-def krum(model_weights_list, global_model_weights, root_train_dataset, device, args):
+def krum(model_weights_list, global_model_weights, device):
     """Aggregate weight updates from the clients using multi-krum."""
     flatten_models_weights = flatten_weights(model_weights_list)
 

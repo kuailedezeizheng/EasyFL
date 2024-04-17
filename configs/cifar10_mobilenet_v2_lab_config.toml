@@ -14,9 +14,9 @@ model = "mobilenet"        # str: model name mobilenet, resnet18, lenet
 #client train
 lr = 0.001            # float: learning rat
 local_ep = 1         # int: the number of local epochs: 2
-local_bs = 512        # int: local batch size: 10
-momentum = 0.9       # float: SGD momentum (default: 0.5)
-weight_decay = 1e-4  # float: SGD weight_decay
+local_bs = 128        # int: local batch size: 10
+# posion client train
+poison_ep = 1
 # data configuration
 dataset = "cifar10"    # str: name of dataset cifar10, cifar100 or mnist
 iid = false           # bool: whether i.i.d or not
@@ -25,7 +25,7 @@ seed = 1             # int: random seed (default: 1)
 # defense configuration
 aggregate_function = "fltrust" # str: name of defense function layer_defense, small_flame , flame, median, flame_median, trimmed_mean, fltrust, small_fltrust, rc_median or fed_avg
 # attack configuration
-malicious_user_rate = 0.3 # float: malicious user number
+malicious_user_rate = 0.2 # float: malicious user number
 toxic_data_ratio = 1 # float: Malicious users decide what proportion of their own dataset becomes toxic data
 attack_method = "sig" # trigger, semantic, blended or sig
 server = false

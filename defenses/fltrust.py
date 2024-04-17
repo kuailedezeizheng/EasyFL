@@ -5,41 +5,8 @@ from torch.utils.data import DataLoader
 
 from datasets.dataset import UserDataset
 from decorators.timing import record_time
-from models.cnn import Cifar10CNN, CNN, EmnistCNN, FashionCNN
-from models.lenet import LeNet, EmnistLeNet
-from models.mobilenetv2 import MobileNetV2
-from models.resnet import resnet18, tiny_imagenet_resnet18
-from models.vgg import VGG13, Cifar100NetVGG16, TinyImageNetVGG16
+from tools.build import build_model
 from user_side import UserSide
-
-
-def get_root_model(model_name, dataset_name):
-    """Build a global model for training."""
-    model_map = {
-        ('cnn', 'mnist'): CNN,
-        ('lenet', 'mnist'): LeNet,
-        ('lenet', 'emnist'): EmnistLeNet,
-        ('cnn', 'emnist'): EmnistCNN,
-        ('lenet', 'fashion_mnist'): LeNet,
-        ('cnn', 'fashion_mnist'): FashionCNN,
-        ('cnn', 'cifar10'): Cifar10CNN,
-        ('mobilenet', 'cifar10'): MobileNetV2,
-        ('vgg13', 'cifar10'): VGG13,
-        ('resnet18', 'cifar100'): resnet18,
-        ('vgg16', 'cifar100'): Cifar100NetVGG16,
-        ('resnet18', 'tiny_imagenet'): tiny_imagenet_resnet18,
-        ('vgg16', 'tiny_imagenet'): TinyImageNetVGG16,
-    }
-
-    key = (model_name, dataset_name)
-    model_fn = model_map.get(key)
-    if model_fn is None:
-        raise ValueError('Error: unrecognized model or dataset')
-    else:
-        print(f"Root Model is {model_name}")
-        print(f"Root Dataset is {dataset_name}")
-
-    return model_fn()
 
 
 def vectorize_net(model_weight):
@@ -52,18 +19,7 @@ def vectorize_net(model_weight):
 
 
 @record_time
-def fltrust(model_weights_list, global_model_weights, root_train_dataset, device, args):
-    # 创建根模型
-    root_model = get_root_model(model_name=args['model'], dataset_name=args['dataset'])
-    # 深拷贝全局模型
-    root_model_weights = copy.deepcopy(global_model_weights)
-    root_train_dataset = UserDataset(root_train_dataset)
-    root_train_loader = DataLoader(root_train_dataset, batch_size=10, shuffle=True)
-    root_device = UserSide(model=root_model,
-                           model_weight=root_model_weights,
-                           train_dataset_loader=root_train_loader,
-                           args=args)
-
+def fltrust(model_weights_list, global_model_weights, root_device, device):
     root_model_weights, _ = root_device.train()
 
     # 深拷贝全局模型权重

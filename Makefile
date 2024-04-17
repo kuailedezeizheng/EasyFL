@@ -1,14 +1,11 @@
 .PHONY: all run clean
 
-all: run
+all: alone
 
-mkdir:
-	mkdir result/csv
-	mkdir result/plot
-	mkdir result/time
-	mkdir poisoned_imgs
+dir:
+	mkdir -p result/csv result/plot result/time result/models result/poisoned_imgs
 
-run:
+mul:
 	python main.py
 
 alone:
@@ -19,4 +16,5 @@ clean:
 	rm -rf result/csv/*
 	rm -rf result/plot/*
 	rm -rf result/time/*
+	rm -rf result/models/*
 	rm -rf ../../tf-logs/*
